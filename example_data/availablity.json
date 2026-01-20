@@ -1,0 +1,457 @@
+[
+  {
+    "resource_id": "f3038059-d8bd-46c3-bb7a-bd9feecb3fe7",
+    "start_date": "2026-01-21",
+    "slots": [
+      {
+        "start_time": "08:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "12:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "12:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "13:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "13:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      }
+    ]
+  },
+  {
+    "resource_id": "72e359fb-1cc2-4629-b0b8-13c14f017ce9",
+    "start_date": "2026-01-21",
+    "slots": [
+      {
+        "start_time": "11:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "12:30:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "13:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      }
+    ]
+  },
+  {
+    "resource_id": "5d05451e-1f5a-4ec2-b891-4d48901d4b90",
+    "start_date": "2026-01-21",
+    "slots": [
+      {
+        "start_time": "08:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 120,
+        "price": "55 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 90,
+        "price": "35 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 60,
+        "price": "20 EUR"
+      }
+    ]
+  },
+  {
+    "resource_id": "1238fd02-011c-48b1-b31c-b60e07c66f8a",
+    "start_date": "2026-01-21",
+    "slots": [
+      {
+        "start_time": "09:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "13:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "13:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "14:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      }
+    ]
+  },
+  {
+    "resource_id": "b64b9f82-ab32-453b-90f1-8641871fe0fc",
+    "start_date": "2026-01-21",
+    "slots": [
+      {
+        "start_time": "08:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "08:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "09:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "09:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "10:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "10:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "11:00:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "11:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "12:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "12:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      },
+      {
+        "start_time": "12:30:00",
+        "duration": 120,
+        "price": "65 EUR"
+      },
+      {
+        "start_time": "13:00:00",
+        "duration": 90,
+        "price": "50 EUR"
+      },
+      {
+        "start_time": "13:30:00",
+        "duration": 60,
+        "price": "30 EUR"
+      }
+    ]
+  }
+]
