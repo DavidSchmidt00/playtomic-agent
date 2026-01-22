@@ -1,0 +1,255 @@
+[
+    {
+        "default_currency": "EUR",
+        "tenant_id": "53dbecb5-218f-4517-9b92-30dcac52a261",
+        "tenant_uid": "lemon-padel-club",
+        "tenant_type": "ANEMONE",
+        "tenant_status": "ACTIVE",
+        "tenant_name": "Lemon Padel Club | Limburg",
+        "address": {
+            "street": "Elzer Straße 2-4",
+            "postal_code": "65556",
+            "city": "Limburg an der Lahn",
+            "sub_administrative_area": "Gießen",
+            "administrative_area": "Hessen",
+            "country": "Deutschland",
+            "country_code": "DE",
+            "coordinate": {
+                "lat": 50.40198432,
+                "lon": 8.0497365
+            },
+            "timezone": "Europe/Berlin"
+        },
+        "images": [
+            "https://res.cloudinary.com/playtomic/image/upload/v1767715380/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715379588.jpg",
+            "https://res.cloudinary.com/playtomic/image/upload/v1767715421/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715420382.jpg",
+            "https://res.cloudinary.com/playtomic/image/upload/v1767715422/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715421926.jpg"
+        ],
+        "image_data": [
+            {
+                "image_id": "a3b3012b-1dee-406d-8a96-fed180ee5e97",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715380/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715379588.jpg",
+                "client_type": "WEB"
+            },
+            {
+                "image_id": "5dd2b3a0-a5a9-4d33-b737-178159aeb685",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715381/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715380883.jpg",
+                "client_type": "MOBILE"
+            },
+            {
+                "image_id": "81675e69-13a2-4299-bf35-934e3feae22a",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715421/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715420382.jpg",
+                "client_type": "WEB"
+            },
+            {
+                "image_id": "88d4ecb5-2c05-431e-8d81-b74f77dc0f17",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715422/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715421926.jpg",
+                "client_type": "WEB"
+            },
+            {
+                "image_id": "fab09500-1413-4d0c-98ca-d083549f57f3",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715423/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715423214.jpg",
+                "client_type": "MOBILE"
+            },
+            {
+                "image_id": "d2b4aef4-8058-4b60-a7ea-9de89e68a08b",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1767715425/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715424762.jpg",
+                "client_type": "MOBILE"
+            }
+        ],
+        "properties": {},
+        "resources": [
+            {
+                "resource_id": "72e359fb-1cc2-4629-b0b8-13c14f017ce9",
+                "name": "Nr.01 # Einzel-/Single Court (1 gegen 1)",
+                "description": "Platz 1 Turf pink ",
+                "sport_id": "PADEL",
+                "reservation_priority": 0,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "single",
+                    "resource_feature": "crystal"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            },
+            {
+                "resource_id": "1238fd02-011c-48b1-b31c-b60e07c66f8a",
+                "name": "Nr.02 # Doppel-/Double Court (2 gegen 2)",
+                "description": "Padel 2, Panorama, Turf schwarz",
+                "sport_id": "PADEL",
+                "reservation_priority": 1,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "double",
+                    "resource_feature": "panoramic"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            },
+            {
+                "resource_id": "f3038059-d8bd-46c3-bb7a-bd9feecb3fe7",
+                "name": "Nr.03 # Doppel-/Double Court (2 gegen 2)",
+                "description": "Padel 3, Turf schwarz ",
+                "sport_id": "PADEL",
+                "reservation_priority": 2,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "double",
+                    "resource_feature": "crystal"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            },
+            {
+                "resource_id": "5d05451e-1f5a-4ec2-b891-4d48901d4b90",
+                "name": "Nr.04 # Einzel-/Single Court (1 gegen 1)",
+                "description": "Platz 4, Turf pink ",
+                "sport_id": "PADEL",
+                "reservation_priority": 3,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "single",
+                    "resource_feature": "crystal"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            },
+            {
+                "resource_id": "b64b9f82-ab32-453b-90f1-8641871fe0fc",
+                "name": "Nr.05 # Doppel-/Double Court (2 gegen 2)",
+                "description": "Platz 5, Turf schwarz",
+                "sport_id": "PADEL",
+                "reservation_priority": 4,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "double",
+                    "resource_feature": "crystal"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            }
+        ],
+        "booking_type": "PUBLIC",
+        "playtomic_status": "ACTIVE",
+        "is_playtomic_partner": false,
+        "default_cancelation_policy": {
+            "amount": 20,
+            "unit": "HOURS"
+        },
+        "opening_hours": {
+            "FRIDAY": {
+                "opening_time": "09:00",
+                "closing_time": "00:00"
+            },
+            "THURSDAY": {
+                "opening_time": "09:00",
+                "closing_time": "22:00"
+            },
+            "MONDAY": {
+                "opening_time": "09:00",
+                "closing_time": "22:00"
+            },
+            "SUNDAY": {
+                "opening_time": "09:00",
+                "closing_time": "22:00"
+            },
+            "TUESDAY": {
+                "opening_time": "09:00",
+                "closing_time": "22:00"
+            },
+            "WEDNESDAY": {
+                "opening_time": "09:00",
+                "closing_time": "22:00"
+            },
+            "SATURDAY": {
+                "opening_time": "09:00",
+                "closing_time": "00:00"
+            }
+        },
+        "communications_language": "de",
+        "onboarding_status": "FINISHED",
+        "booking_settings": {
+            "booking_ahead_limit": 43200,
+            "max_consecutive_bookable_time": 360,
+            "max_bookable_time_per_day": 600,
+            "max_number_of_active_bookings": null,
+            "max_number_of_bookings_per_day": null
+        },
+        "created_at": "2025-02-17T12:48:25",
+        "slug": "lemon-padel-club",
+        "sport_ids": [
+            "PADEL"
+        ],
+        "tenant_hostname": "anemone",
+        "cancelation_policies": [
+            {
+                "sport_id": "PADEL",
+                "duration": {
+                    "amount": 20,
+                    "unit": "HOURS"
+                },
+                "sport_ids": [
+                    "PADEL"
+                ]
+            }
+        ],
+        "vat_rate": 0.21,
+        "url": "https://api.syltek.com"
+    }
+]

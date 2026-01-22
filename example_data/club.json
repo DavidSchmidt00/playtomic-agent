@@ -1,0 +1,266 @@
+{
+    "props": {
+        "pageProps": {
+            "tenant": {
+                "tenant_id": "53dbecb5-218f-4517-9b92-30dcac52a261",
+                "tenant_name": "Lemon Padel Club | Limburg",
+                "slug": "lemon-padel-club",
+                "address": {
+                    "street": "Elzer Straße 2-4",
+                    "postal_code": "65556",
+                    "city": "Limburg an der Lahn",
+                    "sub_administrative_area": "Gießen",
+                    "administrative_area": "Hessen",
+                    "country": "Deutschland",
+                    "country_code": "DE",
+                    "coordinate": {
+                        "lat": 50.40198432,
+                        "lon": 8.0497365
+                    },
+                    "timezone": "Europe/Berlin"
+                },
+                "images": [
+                    "https://res.cloudinary.com/playtomic/image/upload/v1767715380/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715379588.jpg",
+                    "https://res.cloudinary.com/playtomic/image/upload/v1767715421/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715420382.jpg",
+                    "https://res.cloudinary.com/playtomic/image/upload/v1767715422/pro/tenants/53dbecb5-218f-4517-9b92-30dcac52a261/1767715421926.jpg"
+                ],
+                "properties": {
+                    "FACILITY_CHANGEROOM": "true",
+                    "DETAILS_PAGE_DESCRIPTION": "Lemon Padel – Die erste Indoor-Padel-Anlage in Limburg!\nWillkommen bei Lemon Padel, der ersten Indoor-Padel-Anlage in Limburg! Bei uns erwarten Dich fünf erstklassige Adidas Courts -  3x Doppel- und 2x Single Courts – perfekt für spannende Matches und intensives Training.\nTop-Ausstattung:\n5 Adidas Padel Courts (3x Doppel- \u0026 2x Single-Court).\nIndoor-Anlage – wetterunabhängig spielen.\nKostenlose Parkplätze direkt vor der Tür.\n**Unsere Leihschläger stehen dir kostenfrei zur Verfügung. **\nOb Anfänger oder Profi – bei Lemon Padel erlebst Du Padel in bester Qualität.\nSichere Dir jetzt Deine Spielzeit über Playtomic und werde Teil unserer Community!\n\nDu findest uns auf dem Gelände der ehemailgen Diskothek/Nachtschicht.",
+                    "WEBSITE_URL": "http://www.lemonpadel.club",
+                    "CONTACT_PHONE": "+49 15153491548",
+                    "FACILITY_FREE_PARKING": "true",
+                    "FACILITY_MATERIAL_RENTING": "true",
+                    "FACILITY_CAFETERIA": "true",
+                    "DISABLE_AUTO_SPLIT_PAYMENT_FOR_TENANT_TAGS": "e0e2c3e8-966a-4474-ae4b-1ca7c5189d2f",
+                    "FACILITY_LOCKERS": "true",
+                    "FACILITY_RESTAURANT": "false",
+                    "FACILITY_SNACK_BAR": "true",
+                    "FACILITY_WIFI": "false"
+                },
+                "resources": [
+                    {
+                        "resourceId": "72e359fb-1cc2-4629-b0b8-13c14f017ce9",
+                        "name": "Nr.01 # Einzel-/Single Court (1 gegen 1)",
+                        "sport": "PADEL",
+                        "features": [
+                            "indoor",
+                            "single",
+                            "crystal"
+                        ]
+                    },
+                    {
+                        "resourceId": "1238fd02-011c-48b1-b31c-b60e07c66f8a",
+                        "name": "Nr.02 # Doppel-/Double Court (2 gegen 2)",
+                        "sport": "PADEL",
+                        "features": [
+                            "indoor",
+                            "double",
+                            "panoramic"
+                        ]
+                    },
+                    {
+                        "resourceId": "f3038059-d8bd-46c3-bb7a-bd9feecb3fe7",
+                        "name": "Nr.03 # Doppel-/Double Court (2 gegen 2)",
+                        "sport": "PADEL",
+                        "features": [
+                            "indoor",
+                            "double",
+                            "crystal"
+                        ]
+                    },
+                    {
+                        "resourceId": "5d05451e-1f5a-4ec2-b891-4d48901d4b90",
+                        "name": "Nr.04 # Einzel-/Single Court (1 gegen 1)",
+                        "sport": "PADEL",
+                        "features": [
+                            "indoor",
+                            "single",
+                            "crystal"
+                        ]
+                    },
+                    {
+                        "resourceId": "b64b9f82-ab32-453b-90f1-8641871fe0fc",
+                        "name": "Nr.05 # Doppel-/Double Court (2 gegen 2)",
+                        "sport": "PADEL",
+                        "features": [
+                            "indoor",
+                            "double",
+                            "crystal"
+                        ]
+                    }
+                ],
+                "opening_hours": {
+                    "MONDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "22:00"
+                    },
+                    "FRIDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "00:00"
+                    },
+                    "TUESDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "22:00"
+                    },
+                    "SUNDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "22:00"
+                    },
+                    "WEDNESDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "22:00"
+                    },
+                    "THURSDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "22:00"
+                    },
+                    "SATURDAY": {
+                        "opening_time": "09:00",
+                        "closing_time": "00:00"
+                    }
+                },
+                "sport_ids": [
+                    "PADEL"
+                ],
+                "communications_language": "de"
+            },
+            "tenantDescriptionHTML": "\n\u003cp class=\"text-sm text-primary-80 mb-3 leading-relaxed\"\u003e\n  Lemon Padel – Die erste Indoor-Padel-Anlage in Limburg!\n  Willkommen bei Lemon Padel, der ersten Indoor-Padel-Anlage in Limburg! Bei uns erwarten Dich fünf erstklassige Adidas Courts - 3x Doppel- und 2x Single Courts – perfekt für spannende Matches und intensives Training.\n  Top-Ausstattung:\n  5 Adidas Padel Courts (3x Doppel- \u0026#x26; 2x Single-Court).\n  Indoor-Anlage – wetterunabhängig spielen.\n  Kostenlose Parkplätze direkt vor der Tür.\n  **Unsere Leihschläger stehen dir kostenfrei zur Verfügung. **\n  Ob Anfänger oder Profi – bei Lemon Padel erlebst Du Padel in bester Qualität.\n  Sichere Dir jetzt Deine Spielzeit über Playtomic und werde Teil unserer Community!\n\u003c/p\u003e\n\u003cp class=\"text-sm text-primary-80 mb-3 leading-relaxed\"\u003eDu findest uns auf dem Gelände der ehemailgen Diskothek/Nachtschicht.\u003c/p\u003e\n",
+            "tenantAmenities": [
+                "FACILITY_CHANGEROOM",
+                "FACILITY_FREE_PARKING",
+                "FACILITY_MATERIAL_RENTING",
+                "FACILITY_CAFETERIA",
+                "FACILITY_LOCKERS",
+                "FACILITY_SNACK_BAR"
+            ],
+            "tenantOffers": [
+                {
+                    "offer_id": "4d8218a2-ee65-4b56-a411-300f1f3cbfd0",
+                    "name": "Guthaben +10 %",
+                    "description": "Lade 100 € auf und erhalte 110 € gutgeschrieben ",
+                    "price": "100 EUR",
+                    "expiration_date": null,
+                    "tenant": {
+                        "tenant_id": "53dbecb5-218f-4517-9b92-30dcac52a261",
+                        "tenant_name": "Lemon Padel Club | Limburg",
+                        "tenant_type": "ANEMONE"
+                    }
+                },
+                {
+                    "offer_id": "647a208b-3a52-4c09-8452-f9d8923cccbb",
+                    "name": "Guthaben +15 %",
+                    "description": "Lade 200 € auf und erhalte 230 € gutgeschrieben ",
+                    "price": "200 EUR",
+                    "expiration_date": null,
+                    "tenant": {
+                        "tenant_id": "53dbecb5-218f-4517-9b92-30dcac52a261",
+                        "tenant_name": "Lemon Padel Club | Limburg",
+                        "tenant_type": "ANEMONE"
+                    }
+                },
+                {
+                    "offer_id": "09d291d5-ea42-498f-85b5-ed09bf16227c",
+                    "name": "Guthaben +18%",
+                    "description": "Lade 500 € auf und erhalte 590 € gutgeschrieben",
+                    "price": "500 EUR",
+                    "expiration_date": null,
+                    "tenant": {
+                        "tenant_id": "53dbecb5-218f-4517-9b92-30dcac52a261",
+                        "tenant_name": "Lemon Padel Club | Limburg",
+                        "tenant_type": "ANEMONE"
+                    }
+                }
+            ],
+            "staticMapURL": "https://maps.googleapis.com/maps/api/staticmap?key=AIzaSyDYIBA5tZZKPqjQelYdEEJd2HyM29UVwO8\u0026center=50.40198432%2C8.0497365\u0026zoom=15\u0026size=400x300\u0026markers=color%3Ared%7C50.40198432%2C8.0497365\u0026signature=YTfB4_AWCgjlI1YW5AvXlmeetbk%3D",
+            "otherRelevantTenants": [
+                {
+                    "tenant_id": "257443be-07e3-45d3-9ad4-b269ca388ade",
+                    "tenant_name": "Padel Taunus - Usingen",
+                    "slug": "usinger-tennis-club",
+                    "city": "Usingen"
+                },
+                {
+                    "tenant_id": "66a74255-67cf-4e33-9af4-9d33d97733a8",
+                    "tenant_name": "Padel Tennis Wiesbaden",
+                    "slug": "padel-tennis-wiesbaden",
+                    "city": "Wiesbaden"
+                },
+                {
+                    "tenant_id": "64502aa1-af8a-43a3-a7f6-7c4928861b63",
+                    "tenant_name": "Taunus Padel im KTEV",
+                    "slug": "taunus-padel-im-ktev",
+                    "city": "Kelkheim (Taunus)"
+                },
+                {
+                    "tenant_id": "24925684-21ea-4a07-a20d-73efe7c4cc9c",
+                    "tenant_name": "Padel Wallau",
+                    "slug": "padel-wallau",
+                    "city": "Wallau"
+                },
+                {
+                    "tenant_id": "4e781b04-c7f7-424b-9bc1-f8dd1256864c",
+                    "tenant_name": "Racket Center Hofheim",
+                    "slug": "racket-center-hofheim",
+                    "city": "Hofheim am Taunus"
+                },
+                {
+                    "tenant_id": "fd2b39e2-def8-429f-9f9e-95b58234a099",
+                    "tenant_name": "Höchster Thc",
+                    "slug": "hochster-thc",
+                    "city": "Frankfurt am Main"
+                },
+                {
+                    "tenant_id": "555895c6-9927-41e6-8ca9-486924971d6e",
+                    "tenant_name": "Padel Frankfurt",
+                    "slug": "padel-frankfurt",
+                    "city": "Frankfurt am Main"
+                },
+                {
+                    "tenant_id": "4f86d403-d708-406a-a363-b6b959720571",
+                    "tenant_name": "Sportpark Frankfurt",
+                    "slug": "sportpark-frankfurt",
+                    "city": "Frankfurt am Main"
+                },
+                {
+                    "tenant_id": "87d53693-7720-41e4-a38c-5b93c8694d3b",
+                    "tenant_name": "Gibson Beach Club ",
+                    "slug": "gibson-beach-club",
+                    "city": "Frankfurt am Main"
+                },
+                {
+                    "tenant_id": "bc5dde5b-af05-489d-ab45-18ed96933ae2",
+                    "tenant_name": "HTC Schwarz-Weiss Bonn",
+                    "slug": "htc-schwarz-weiss-bonn-ev",
+                    "city": "Bonn"
+                }
+            ],
+            "browserLocale": "de-DE",
+            "storyblokApiVersion": "published",
+            "preview": false
+        },
+        "__N_SSP": true
+    },
+    "page": "/clubs/[tenantSlug]",
+    "query": {
+        "tenantSlug": "lemon-padel-club"
+    },
+    "buildId": "MXFDBoaJoI5OdNsPmKPZs",
+    "isFallback": false,
+    "isExperimentalCompile": false,
+    "gssp": true,
+    "locale": "en",
+    "locales": [
+        "en",
+        "es",
+        "it",
+        "pt",
+        "fi",
+        "fr",
+        "nl",
+        "sv",
+        "de"
+    ],
+    "defaultLocale": "en",
+    "scriptLoader": []
+}
