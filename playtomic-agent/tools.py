@@ -1,10 +1,10 @@
 from langchain_core.tools import tool
 from typing import Literal, Annotated
-import playtomic_client
-from data_models import Slot
+import playtomic_client.client
+from playtomic_client.models import Slot
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import playtomic_utils
+import playtomic_client.utils
 
 @tool(description="Finds available slots for a specific club and date and filters them by court type, start time and duration.")
 def find_slots(club_slug: Annotated[str, "The slug of the club"],

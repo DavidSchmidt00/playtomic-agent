@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
-from playtomic_utils import create_booking_link
+from playtomic_client.utils import create_booking_link
 
 @dataclass
 class Court:

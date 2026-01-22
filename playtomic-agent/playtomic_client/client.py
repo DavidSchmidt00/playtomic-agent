@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import argparse
 import logging
-from data_models import Club, Court, Slot, AvailableSlots
+from playtomic_client.models import Club, Court, Slot, AvailableSlots
 from typing import Literal, Annotated
 
 from langchain_core.tools import tool
@@ -222,7 +222,7 @@ def find_slots(club_slug: str,
 
 def cli():
     parser = argparse.ArgumentParser(description="Find available Playtomic Padel slots.")
-    parser.add_argument("--club-slug", type=str, default="lemon-padel-club", help="Club slug")
+    parser.add_argument("--club-slug", type=str, help="Club slug")
     parser.add_argument("--date", type=str, default=datetime.now().strftime("%Y-%m-%d"), help="Date to check (YYYY-MM-DD) (Default: today)")
     parser.add_argument("--court-type", type=str, choices=["SINGLE", "DOUBLE"], help="Optional type of court")
     parser.add_argument("--start-time", type=str, help="Optional start time to search from (HH:MM)")
