@@ -1,23 +1,30 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-    "name": "Python 3.14 Dev Container",
-    "build": {
-        "dockerfile": "Dockerfile"
-    },
-    "features": {
-        // Installing common features
-        "ghcr.io/devcontainers/features/common-utils:2": {}
-    },
-    // Configure tool-specific properties.
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-python.python",
-                "ms-python.debugpy"
-            ]
-        }
-    },
-    // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "pip install --user -r requirements.txt",
-    // Set the remote user to the one we created in Dockerfile
-    "remoteUser": "vscode"
+	"name": "Python 3",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.13-bullseye",
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers/features/git:1": {}
+	},
+	"forwardPorts": [
+		8080
+	],
+	"postCreateCommand": "pip3 install -U -r requirements.txt",
+	"runArgs": [
+		"--env-file",
+		"./APIKEY.env"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-containers"
+			]
+		}
+	},
+	"containerEnv": {
+		"PYTHONPATH": "$PYTHONPATH:/workspaces/playtomic-agent"
+	}
 }
