@@ -1,0 +1,10 @@
+{
+    "dependencies": [
+        "."
+    ],
+    "graphs": {
+        "playtomic_agent": "./agent.py:playtomic_agent"
+    },
+    "env": "../APIKEY.env",
+    "image_distro": "wolfi"
+}
