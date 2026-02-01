@@ -5,6 +5,7 @@
     "graphs": {
         "playtomic_agent": "./agent.py:playtomic_agent"
     },
-    "env": "../APIKEY.env",
-    "image_distro": "wolfi"
+    "env": "../../.env",
+    "image_distro": "wolfi",
+    "python_version": "3.11"
 }

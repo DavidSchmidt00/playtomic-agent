@@ -1,0 +1,61 @@
+"""Playtomic Agent - LangGraph-based AI assistant for finding Padel court slots."""
+
+from datetime import datetime
+
+from langchain.agents import create_agent
+from langchain_core.rate_limiters import InMemoryRateLimiter
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+from playtomic_agent.config import get_settings
+from playtomic_agent.tools import create_booking_link, find_slots, is_weekend
+
+# Load settings
+settings = get_settings()
+
+
+def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
+    """Creates a rate limiter for API requests.
+
+    Args:
+        requests_per_minute: The number of requests allowed per minute.
+
+    Returns:
+        InMemoryRateLimiter: An in-memory rate limiter instance.
+    """
+    return InMemoryRateLimiter(
+        requests_per_second=requests_per_minute / 60,
+        check_every_n_seconds=0.1,
+        max_bucket_size=10,
+    )
+
+
+# Initialize language model with rate limiter
+gemini = ChatGoogleGenerativeAI(
+    # model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
+    google_api_key=settings.gemini_api_key,
+    rate_limiter=create_rate_limiter(10),
+)
+llm = gemini
+
+# Create the playtomic agent
+playtomic_agent = create_agent(
+    model=llm,
+    name="playtomic_agent",
+    tools=[find_slots, create_booking_link, is_weekend],
+    system_prompt=f"""You are an assistant that helps people finding available padel courts. 
+                    Todays date is {datetime.now().strftime("%Y-%m-%d")}.
+                    You are located in the timezone {settings.default_timezone}.
+                    Do not format the output.""",
+)
+
+if __name__ == "__main__":
+    for chunk in playtomic_agent.stream(  
+    {"messages": [{"role": "user", "content": """
+                                            Search for the next available 90 minutes slot for a double court at lemon-padel-club on 
+                                            between 18:00 and 20:00. Search until you found one.
+                                            """}]},
+    stream_mode="updates",):
+        for step, data in chunk.items():
+            print(f"step: {step}")
+            print(f"content: {data['messages'][-1].content_blocks[0].text}")

@@ -209,7 +209,6 @@ __marimo__/
 # LangChain/LangGraph
 .langgraph_api/
 
-# Secrets
-APIKEY.env
-
-example_data/
+# Project specific
+*.env
+!.env.example

@@ -1,6 +1,0 @@
-requests
-beautifulsoup4
-langgraph
-langgraph-cli[inmem]
-langgraph-supervisor
-langchain[google-genai]
