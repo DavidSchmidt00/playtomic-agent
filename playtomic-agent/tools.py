@@ -15,7 +15,7 @@ def find_slots(club_slug: Annotated[str, "The slug of the club"],
                timezone: Annotated[str | None, "Optional: The timezone to use. Must be provided if start_time or end_time is set."] = None,
                duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
                print_results: Annotated[bool, "Optional: Whether to print the results"] = False) -> Annotated[list[Slot] | None, "The filtered slots."]:
-    return playtomic_client.find_slots(club_slug=club_slug,
+    return playtomic_client.client.find_slots(club_slug=club_slug,
                                        date=date,
                                        court_type=court_type,
                                        start_time=start_time,
@@ -30,7 +30,7 @@ def create_booking_link(club_id: Annotated[str, "The club id of the slot"],
                   time: Annotated[str, "The time of the slot (format: 2026-02-18T08:00:00.000Z)"],
                   duration: Annotated[int, "The duration of the slot (minutes)"],
                   ) -> str:
-    return playtomic_utils.create_booking_link(club_id=club_id, court_id=court_id, time=time, duration=duration)
+    return playtomic_client.utils.create_booking_link(club_id=club_id, court_id=court_id, time=time, duration=duration)
 
 @tool(description="Returns whether a date is a weekend.")
 def is_weekend(date: Annotated[str, "The date to check (YYYY-MM-DD)"]):
