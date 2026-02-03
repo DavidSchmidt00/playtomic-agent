@@ -15,7 +15,7 @@ from playtomic_agent.client.exceptions import (
     ValidationError,
 )
 from playtomic_agent.config import get_settings
-from playtomic_agent.models import AvailableSlots, Club, Court, Slot
+from playtomic_agent.models import Club, Court, Slot
 
 logger = logging.getLogger(__name__)
 
@@ -75,16 +75,22 @@ class PlaytomicClient:
 
         # Determine search type
         if slug:
-            identifier = slug
+            identifier: str = slug
             search_type = "slug"
         else:
-            identifier = name
+            identifier = name  # type: ignore[assignment]  # Validated on line 73-74
             search_type = "name"
 
         try:
+            params: dict[str, str] = {}
+            if slug:
+                params["tenant_uid"] = slug
+            elif name:
+                params["tenant_name"] = name
+
             response = self.session.get(
                 f"{self.api_base_url}/tenants",
-                params={"tenant_uid": slug} if slug else {"tenant_name": name},
+                params=params,
                 timeout=10,
             )
             response.raise_for_status()
@@ -138,7 +144,7 @@ class PlaytomicClient:
         date: str,
         start_time: str | None = None,
         end_time: str | None = None,
-    ) -> AvailableSlots:
+    ) -> list[Slot]:
         """Fetch available slots for a club on a specific date.
 
         Args:
@@ -148,7 +154,7 @@ class PlaytomicClient:
             end_time: Optional end time filter in HH:MM format (UTC)
 
         Returns:
-            AvailableSlots object containing all available slots
+            List of available slots
 
         Raises:
             APIError: If the API request fails
@@ -181,7 +187,7 @@ class PlaytomicClient:
         except json.JSONDecodeError as e:
             raise APIError("Invalid JSON response from availability API") from e
 
-        available_slots = AvailableSlots(club_id=club.club_id, date=date, slots=[])
+        available_slots = []
 
         for resource_availability in data:
             resource_id = resource_availability.get("resource_id")
@@ -202,7 +208,7 @@ class PlaytomicClient:
                         duration=slot_data["duration"],
                         price=slot_data["price"],
                     )
-                    available_slots.slots.append(slot)
+                    available_slots.append(slot)
                 except (KeyError, ValueError) as e:
                     logger.warning(f"Skipping invalid slot data: {e}")
                     continue
@@ -217,14 +223,14 @@ class PlaytomicClient:
             time_range = f"until {end_time} (UTC)"
 
         logger.info(
-            f"Found {len(available_slots.slots)} available slots for {club.name} on {date} {time_range}"
+            f"Found {len(available_slots)} available slots for {club.name} on {date} {time_range}"
         )
         return available_slots
 
     def filter_slots(
         self,
         club: Club,
-        available_slots: AvailableSlots,
+        available_slots: list[Slot],
         court_type: Literal["SINGLE", "DOUBLE"] | None = None,
         duration: int | None = None,
     ) -> list[Slot]:
@@ -249,7 +255,7 @@ class PlaytomicClient:
 
         # Filter slots
         filtered_slots = []
-        for slot in available_slots.slots:
+        for slot in available_slots:
             if slot.court_id not in target_court_ids:
                 continue
             if duration is not None and slot.duration != duration:
@@ -302,11 +308,13 @@ class PlaytomicClient:
         utc_start = None
         utc_end = None
         if start_time:
+            assert timezone is not None  # Already validated on line 301
             local_dt = datetime.strptime(f"{date}T{start_time}", "%Y-%m-%dT%H:%M")
             local_dt = local_dt.replace(tzinfo=ZoneInfo(timezone))
             utc_start = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
 
         if end_time:
+            assert timezone is not None  # Already validated on line 301
             local_dt = datetime.strptime(f"{date}T{end_time}", "%Y-%m-%dT%H:%M")
             local_dt = local_dt.replace(tzinfo=ZoneInfo(timezone))
             utc_end = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
@@ -331,6 +339,7 @@ class PlaytomicClient:
         if filtered_slots:
             logger.info(f"Found {len(filtered_slots)} slots matching criteria{filter_msg}")
             if log_slots:
+                assert timezone is not None  # Already validated on line 301
                 _print_results(filtered_slots, timezone)
         else:
             logger.warning(f"No slots found matching criteria{filter_msg}")

@@ -71,7 +71,7 @@ class APIError(PlaytomicError):
             status_code: HTTP status code if available
             response_data: Response data from the API
         """
-        details = {}
+        details: dict[str, int | dict] = {}
         if status_code:
             details["status_code"] = status_code
         if response_data:

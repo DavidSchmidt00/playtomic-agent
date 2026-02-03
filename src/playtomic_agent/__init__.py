@@ -7,13 +7,12 @@ on Playtomic using AI-powered natural language interaction.
 __version__ = "0.1.0"
 
 from playtomic_agent.config import Settings, get_settings
-from playtomic_agent.models import AvailableSlots, Club, Court, Slot
+from playtomic_agent.models import Club, Court, Slot
 
 __all__ = [
     "Club",
     "Court",
     "Slot",
-    "AvailableSlots",
     "Settings",
     "get_settings",
 ]

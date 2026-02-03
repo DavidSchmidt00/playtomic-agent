@@ -78,7 +78,7 @@ def main():
 
     try:
         with PlaytomicClient() as client:
-            slots = client.find_slots(
+            client.find_slots(
                 club_slug=args.club_slug,
                 date=args.date,
                 court_type=args.court_type,

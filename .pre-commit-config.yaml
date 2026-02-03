@@ -30,14 +30,14 @@ repos:
       # Run the formatter (optional, since black is already used)
       - id: ruff-format
 
-  # Mypy - Static type checker (temporarily disabled)
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.8.0
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies:
-  #         - pydantic>=2.0.0
-  #         - pydantic-settings>=2.0.0
-  #         - types-requests
-  #       args: [--config-file=pyproject.toml]
-  #       exclude: ^tests/
+  # Mypy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.0.0
+          - pydantic-settings>=2.0.0
+          - types-requests
+        args: [--config-file=pyproject.toml]
+        exclude: ^tests/

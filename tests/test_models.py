@@ -105,13 +105,3 @@ class TestSlot:
         assert "club-123" in link
         assert "court-1" in link
         assert "duration=90" in link
-
-
-class TestAvailableSlots:
-    """Tests for AvailableSlots model."""
-
-    def test_available_slots_creation(self, sample_available_slots):
-        """Test creating available slots."""
-        assert sample_available_slots.club_id == "test-club-123"
-        assert sample_available_slots.date == "2026-02-15"
-        assert len(sample_available_slots.slots) == 3

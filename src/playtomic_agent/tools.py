@@ -31,7 +31,7 @@ def find_slots(
     """Find available slots using PlaytomicClient."""
     try:
         with PlaytomicClient() as client:
-            return client.find_slots(
+            return client.find_slots(  # type: ignore[no-any-return]
                 club_slug=club_slug,
                 date=date,
                 court_type=court_type,

@@ -110,11 +110,3 @@ class Slot(BaseModel):
             "duration": self.duration,
             "price": self.price,
         }
-
-
-class AvailableSlots(BaseModel):
-    """Collection of available slots for a club on a specific date."""
-
-    club_id: str = Field(description="ID of the club")
-    date: str = Field(description="Date for these slots (YYYY-MM-DD)")  # TODO: use datetime
-    slots: list[Slot] = Field(default_factory=list, description="List of available slots")

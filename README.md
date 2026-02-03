@@ -239,7 +239,6 @@ All models are Pydantic models with full validation:
 - `Club` - Represents a Playtomic club
 - `Court` - Represents a court (single/double)
 - `Slot` - Represents an available time slot
-- `AvailableSlots` - Collection of slots
 
 ## 🤝 Contributing
 

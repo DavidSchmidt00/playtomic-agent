@@ -45,4 +45,4 @@ def get_settings() -> Settings:
     Returns:
         Settings instance with environment variables loaded
     """
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

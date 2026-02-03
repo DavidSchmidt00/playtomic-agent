@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
-from playtomic_agent.models import AvailableSlots, Club, Court, Slot
+from playtomic_agent.models import Club, Court, Slot
 
 
 @pytest.fixture(autouse=True)
@@ -73,16 +73,6 @@ def sample_slots(sample_club):
             price="25.00 EUR",
         ),
     ]
-
-
-@pytest.fixture
-def sample_available_slots(sample_club, sample_slots):
-    """Create sample AvailableSlots for testing."""
-    return AvailableSlots(
-        club_id=sample_club.club_id,
-        date="2026-02-15",
-        slots=sample_slots,
-    )
 
 
 @pytest.fixture

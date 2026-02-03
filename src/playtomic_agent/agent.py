@@ -1,6 +1,5 @@
-"""Playtomic Agent - LangGraph-based AI assistant for finding Padel court slots."""
-
 from datetime import datetime
+from typing import Any
 
 from langchain.agents import create_agent
 from langchain_core.rate_limiters import InMemoryRateLimiter
@@ -39,7 +38,7 @@ gemini = ChatGoogleGenerativeAI(
 llm = gemini
 
 # Create the playtomic agent
-playtomic_agent = create_agent(
+playtomic_agent: Any = create_agent(
     model=llm,
     name="playtomic_agent",
     tools=[find_slots, create_booking_link, is_weekend],
