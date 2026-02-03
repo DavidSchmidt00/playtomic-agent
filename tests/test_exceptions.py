@@ -1,14 +1,12 @@
 """Tests for custom exceptions."""
 
-import pytest
-
 from playtomic_agent.client.exceptions import (
-    PlaytomicError,
+    APIError,
     ClubNotFoundError,
     MultipleClubsFoundError,
-    APIError,
-    ValidationError,
+    PlaytomicError,
     SlotNotFoundError,
+    ValidationError,
 )
 
 
@@ -107,12 +105,7 @@ class TestSlotNotFoundError:
 
     def test_slot_not_found_with_filters(self):
         """Test slot not found with filters."""
-        error = SlotNotFoundError(
-            "test-club",
-            "2026-02-15",
-            court_type="DOUBLE",
-            duration=90
-        )
+        error = SlotNotFoundError("test-club", "2026-02-15", court_type="DOUBLE", duration=90)
         assert "court_type=DOUBLE" in str(error)
         assert "duration=90" in str(error)
         assert error.filters["court_type"] == "DOUBLE"

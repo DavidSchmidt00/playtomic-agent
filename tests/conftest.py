@@ -1,11 +1,11 @@
 """Pytest configuration and fixtures for tests."""
 
-import pytest
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
-from playtomic_agent.models import Club, Court, Slot, AvailableSlots
+import pytest
+from playtomic_agent.models import AvailableSlots, Club, Court, Slot
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +21,7 @@ def mock_settings():
     mock_settings_obj.rate_limit_paid = 1000
     mock_settings_obj.rate_limit_pro = 2000
     mock_settings_obj.log_level = "INFO"
-    
+
     with patch("playtomic_agent.client.api.get_settings", return_value=mock_settings_obj):
         yield mock_settings_obj
 
@@ -46,7 +46,7 @@ def sample_club():
 def sample_slots(sample_club):
     """Create sample slots for testing."""
     base_time = datetime(2026, 2, 15, 10, 0, 0, tzinfo=ZoneInfo("UTC"))
-    
+
     return [
         Slot(
             club_id=sample_club.club_id,
@@ -93,25 +93,19 @@ def mock_api_response_club():
             "tenant_uid": "test-club",
             "tenant_name": "Test Padel Club",
             "tenant_id": "test-club-123",
-            "address": {
-                "timezone": "Europe/Berlin"
-            },
+            "address": {"timezone": "Europe/Berlin"},
             "resources": [
                 {
                     "resource_id": "court-1",
                     "name": "Court 1",
-                    "properties": {
-                        "resource_size": "double"
-                    }
+                    "properties": {"resource_size": "double"},
                 },
                 {
                     "resource_id": "court-2",
                     "name": "Court 2",
-                    "properties": {
-                        "resource_size": "single"
-                    }
-                }
-            ]
+                    "properties": {"resource_size": "single"},
+                },
+            ],
         }
     ]
 
@@ -123,26 +117,12 @@ def mock_api_response_slots():
         {
             "resource_id": "court-1",
             "slots": [
-                {
-                    "start_time": "10:00:00",
-                    "duration": 90,
-                    "price": "25.00 EUR"
-                },
-                {
-                    "start_time": "14:00:00",
-                    "duration": 90,
-                    "price": "25.00 EUR"
-                }
-            ]
+                {"start_time": "10:00:00", "duration": 90, "price": "25.00 EUR"},
+                {"start_time": "14:00:00", "duration": 90, "price": "25.00 EUR"},
+            ],
         },
         {
             "resource_id": "court-2",
-            "slots": [
-                {
-                    "start_time": "10:00:00",
-                    "duration": 60,
-                    "price": "18.00 EUR"
-                }
-            ]
-        }
+            "slots": [{"start_time": "10:00:00", "duration": 60, "price": "18.00 EUR"}],
+        },
     ]

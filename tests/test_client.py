@@ -1,14 +1,14 @@
 """Tests for PlaytomicClient API client."""
 
-import pytest
 from unittest.mock import Mock, patch
-import requests
 
+import pytest
+import requests
 from playtomic_agent.client.api import PlaytomicClient, find_slots
 from playtomic_agent.client.exceptions import (
+    APIError,
     ClubNotFoundError,
     MultipleClubsFoundError,
-    APIError,
     ValidationError,
 )
 
@@ -120,44 +120,28 @@ class TestPlaytomicClient:
     def test_filter_slots_by_court_type(self, sample_club, sample_available_slots):
         """Test filtering slots by court type."""
         client = PlaytomicClient()
-        
+
         # Filter for double courts
-        double_slots = client.filter_slots(
-            sample_club,
-            sample_available_slots,
-            court_type="DOUBLE"
-        )
+        double_slots = client.filter_slots(sample_club, sample_available_slots, court_type="DOUBLE")
         assert len(double_slots) == 2
         assert all(s.court_id in ["court-1", "court-3"] for s in double_slots)
 
         # Filter for single courts
-        single_slots = client.filter_slots(
-            sample_club,
-            sample_available_slots,
-            court_type="SINGLE"
-        )
+        single_slots = client.filter_slots(sample_club, sample_available_slots, court_type="SINGLE")
         assert len(single_slots) == 1
         assert single_slots[0].court_id == "court-2"
 
     def test_filter_slots_by_duration(self, sample_club, sample_available_slots):
         """Test filtering slots by duration."""
         client = PlaytomicClient()
-        
+
         # Filter for 90-minute slots
-        slots_90 = client.filter_slots(
-            sample_club,
-            sample_available_slots,
-            duration=90
-        )
+        slots_90 = client.filter_slots(sample_club, sample_available_slots, duration=90)
         assert len(slots_90) == 2
         assert all(s.duration == 90 for s in slots_90)
 
         # Filter for 60-minute slots
-        slots_60 = client.filter_slots(
-            sample_club,
-            sample_available_slots,
-            duration=60
-        )
+        slots_60 = client.filter_slots(sample_club, sample_available_slots, duration=60)
         assert len(slots_60) == 1
         assert slots_60[0].duration == 60
 
@@ -165,11 +149,7 @@ class TestPlaytomicClient:
         """Test find_slots raises error when time filter without timezone."""
         client = PlaytomicClient()
         with pytest.raises(ValidationError, match="timezone is required"):
-            client.find_slots(
-                club_slug="test-club",
-                date="2026-02-15",
-                start_time="10:00"
-            )
+            client.find_slots(club_slug="test-club", date="2026-02-15", start_time="10:00")
 
 
 class TestBackwardCompatibility:

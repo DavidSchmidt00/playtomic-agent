@@ -61,7 +61,9 @@ class MultipleClubsFoundError(PlaytomicError):
 class APIError(PlaytomicError):
     """Raised when the Playtomic API returns an error."""
 
-    def __init__(self, message: str, status_code: int | None = None, response_data: dict | None = None):
+    def __init__(
+        self, message: str, status_code: int | None = None, response_data: dict | None = None
+    ):
         """Initialize APIError.
 
         Args:

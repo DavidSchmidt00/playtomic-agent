@@ -75,7 +75,7 @@ from playtomic_agent.agent import playtomic_agent
 
 # Stream agent responses
 for chunk in playtomic_agent.stream(
-    {"messages": [{"role": "user", "content": 
+    {"messages": [{"role": "user", "content":
         "Find a 90-minute double court slot at lemon-padel-club "
         "tomorrow between 18:00 and 20:00"
     }]},
@@ -104,7 +104,7 @@ with PlaytomicClient() as client:
         timezone="Europe/Berlin",
         duration=90
     )
-    
+
     for slot in slots:
         print(f"{slot.court_name}: {slot.time} - {slot.price}")
         print(f"Book: {slot.get_link()}")
@@ -119,15 +119,15 @@ with PlaytomicClient() as client:
     # 1. Get club information
     club = client.get_club(slug="lemon-padel-club")
     print(f"Club: {club.name} ({len(club.courts)} courts)")
-    
+
     # 2. Get all available slots
     available_slots = client.get_available_slots(
-        club, 
+        club,
         date="2026-02-15",
         start_time="18:00",  # UTC
         end_time="20:00"
     )
-    
+
     # 3. Filter manually
     filtered = client.filter_slots(
         club,

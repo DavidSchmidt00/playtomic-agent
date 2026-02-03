@@ -1,11 +1,9 @@
 """Tests for Pydantic models."""
 
-import pytest
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from pydantic import ValidationError
 
-from playtomic_agent.models import Club, Court, Slot, AvailableSlots
+from playtomic_agent.models import Court, Slot
 
 
 class TestCourt:

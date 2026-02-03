@@ -1,0 +1,43 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+
+  # Black - Code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+
+  # Ruff - Linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.2.0
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+      # Run the formatter (optional, since black is already used)
+      - id: ruff-format
+
+  # Mypy - Static type checker (temporarily disabled)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - pydantic>=2.0.0
+  #         - pydantic-settings>=2.0.0
+  #         - types-requests
+  #       args: [--config-file=pyproject.toml]
+  #       exclude: ^tests/

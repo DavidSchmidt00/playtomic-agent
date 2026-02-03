@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 class PlaytomicClient:
     """Client for interacting with the Playtomic API.
-    
+
     This class provides methods to fetch club information and available court slots
     from the Playtomic API with improved error handling and resource management.
-    
+
     Attributes:
         api_base_url: Base URL for the Playtomic API
         session: Requests session for connection pooling
@@ -33,7 +33,7 @@ class PlaytomicClient:
 
     def __init__(self, api_base_url: str | None = None):
         """Initialize the Playtomic client.
-        
+
         Args:
             api_base_url: Base URL for the API. If None, uses default from settings.
         """
@@ -56,14 +56,14 @@ class PlaytomicClient:
 
     def get_club(self, slug: str | None = None, name: str | None = None) -> Club:
         """Fetch club information by slug or name.
-        
+
         Args:
             slug: Club slug/identifier
             name: Club name
-            
+
         Returns:
             Club object with courts and metadata
-            
+
         Raises:
             ValidationError: If neither slug nor name is provided
             ClubNotFoundError: If no club is found
@@ -91,7 +91,9 @@ class PlaytomicClient:
         except requests.RequestException as e:
             raise APIError(
                 f"Failed to fetch club with {search_type}: {identifier}",
-                status_code=getattr(e.response, "status_code", None) if hasattr(e, "response") else None,
+                status_code=(
+                    getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+                ),
             ) from e
 
         try:
@@ -138,16 +140,16 @@ class PlaytomicClient:
         end_time: str | None = None,
     ) -> AvailableSlots:
         """Fetch available slots for a club on a specific date.
-        
+
         Args:
             club: Club object
             date: Date in YYYY-MM-DD format
             start_time: Optional start time filter in HH:MM format (UTC)
             end_time: Optional end time filter in HH:MM format (UTC)
-            
+
         Returns:
             AvailableSlots object containing all available slots
-            
+
         Raises:
             APIError: If the API request fails
         """
@@ -169,7 +171,9 @@ class PlaytomicClient:
         except requests.RequestException as e:
             raise APIError(
                 f"Failed to fetch availability for {club.name}",
-                status_code=getattr(e.response, "status_code", None) if hasattr(e, "response") else None,
+                status_code=(
+                    getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+                ),
             ) from e
 
         try:
@@ -211,8 +215,10 @@ class PlaytomicClient:
             time_range = f"from {start_time} (UTC) onwards"
         elif end_time:
             time_range = f"until {end_time} (UTC)"
-        
-        logger.info(f"Found {len(available_slots.slots)} available slots for {club.name} on {date} {time_range}")
+
+        logger.info(
+            f"Found {len(available_slots.slots)} available slots for {club.name} on {date} {time_range}"
+        )
         return available_slots
 
     def filter_slots(
@@ -223,13 +229,13 @@ class PlaytomicClient:
         duration: int | None = None,
     ) -> list[Slot]:
         """Filter slots by court type and duration.
-        
+
         Args:
             club: Club object
             available_slots: Available slots to filter
             court_type: Optional court type filter (SINGLE or DOUBLE)
             duration: Optional duration filter in minutes
-            
+
         Returns:
             List of filtered slots
         """
@@ -265,9 +271,9 @@ class PlaytomicClient:
         log_slots: bool = False,
     ) -> list[Slot]:
         """Find available slots with filtering.
-        
+
         This is a convenience method that combines club fetch, slot fetch, and filtering.
-        
+
         Args:
             club_slug: Club identifier
             date: Date in YYYY-MM-DD format
@@ -277,10 +283,10 @@ class PlaytomicClient:
             timezone: Timezone for time filters (required if times are specified)
             duration: Optional duration filter in minutes
             log_slots: Whether to log the slots
-            
+
         Returns:
             List of filtered slots
-            
+
         Raises:
             ValidationError: If time filters are specified without timezone
             ClubNotFoundError: If club is not found
@@ -320,7 +326,7 @@ class PlaytomicClient:
             filters.append(f"from: {start_time}")
         if end_time:
             filters.append(f"until: {end_time}")
-        
+
         filter_msg = f" ({', '.join(filters)})" if filters else ""
         if filtered_slots:
             logger.info(f"Found {len(filtered_slots)} slots matching criteria{filter_msg}")
@@ -330,6 +336,7 @@ class PlaytomicClient:
             logger.warning(f"No slots found matching criteria{filter_msg}")
 
         return filtered_slots
+
 
 def _print_results(slots: list[Slot], timezone: str):
     """Print slots grouped by court."""

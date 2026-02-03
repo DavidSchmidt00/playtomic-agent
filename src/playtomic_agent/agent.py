@@ -43,19 +43,27 @@ playtomic_agent = create_agent(
     model=llm,
     name="playtomic_agent",
     tools=[find_slots, create_booking_link, is_weekend],
-    system_prompt=f"""You are an assistant that helps people finding available padel courts. 
+    system_prompt=f"""You are an assistant that helps people finding available padel courts.
                     Todays date is {datetime.now().strftime("%Y-%m-%d")}.
                     You are located in the timezone {settings.default_timezone}.
                     Do not format the output.""",
 )
 
 if __name__ == "__main__":
-    for chunk in playtomic_agent.stream(  
-    {"messages": [{"role": "user", "content": """
-                                            Search for the next available 90 minutes slot for a double court at lemon-padel-club on 
+    for chunk in playtomic_agent.stream(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": """
+                                            Search for the next available 90 minutes slot for a double court at lemon-padel-club on
                                             between 18:00 and 20:00. Search until you found one.
-                                            """}]},
-    stream_mode="updates",):
+                                            """,
+                }
+            ]
+        },
+        stream_mode="updates",
+    ):
         for step, data in chunk.items():
             print(f"step: {step}")
             print(f"content: {data['messages'][-1].content_blocks[0].text}")

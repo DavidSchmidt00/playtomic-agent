@@ -23,10 +23,8 @@ classifiers = [
 
 dependencies = [
     "requests>=2.31.0",
-    "beautifulsoup4>=4.12.0",
     "langgraph>=0.2.0",
     "langgraph-cli[inmem]>=0.1.0",
-    "langgraph-supervisor>=0.0.31",  # Latest available version
     "langchain-google-genai>=2.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
@@ -44,10 +42,6 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",
     "pre-commit>=3.5.0",
-]
-cli = [
-    "click>=8.1.0",
-    "rich>=13.0.0",
 ]
 
 [project.scripts]
@@ -74,7 +68,6 @@ extend-exclude = '''
   | \.venv
   | build
   | dist
-  | frontend
 )/
 '''
 
@@ -82,7 +75,6 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["frontend"]
 
 [tool.ruff.lint]
 select = [
@@ -115,7 +107,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
-exclude = ["frontend", "tests"]
+exclude = ["tests"]
 
 [[tool.mypy.overrides]]
 module = "bs4.*"
