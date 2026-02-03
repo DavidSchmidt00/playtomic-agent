@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Any
 
 from langchain.agents import create_agent
 from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph.state import CompiledStateGraph
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.tools import create_booking_link, find_slots, is_weekend
@@ -38,7 +38,7 @@ gemini = ChatGoogleGenerativeAI(
 llm = gemini
 
 # Create the playtomic agent
-playtomic_agent: Any = create_agent(
+playtomic_agent: CompiledStateGraph = create_agent(
     model=llm,
     name="playtomic_agent",
     tools=[find_slots, create_booking_link, is_weekend],

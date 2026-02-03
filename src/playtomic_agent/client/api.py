@@ -78,7 +78,7 @@ class PlaytomicClient:
             identifier: str = slug
             search_type = "slug"
         else:
-            identifier = name  # type: ignore[assignment]  # Validated on line 73-74
+            identifier = name  # type: ignore[assignment]
             search_type = "name"
 
         try:
@@ -308,13 +308,13 @@ class PlaytomicClient:
         utc_start = None
         utc_end = None
         if start_time:
-            assert timezone is not None  # Already validated on line 301
+            assert timezone is not None
             local_dt = datetime.strptime(f"{date}T{start_time}", "%Y-%m-%dT%H:%M")
             local_dt = local_dt.replace(tzinfo=ZoneInfo(timezone))
             utc_start = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
 
         if end_time:
-            assert timezone is not None  # Already validated on line 301
+            assert timezone is not None
             local_dt = datetime.strptime(f"{date}T{end_time}", "%Y-%m-%dT%H:%M")
             local_dt = local_dt.replace(tzinfo=ZoneInfo(timezone))
             utc_end = local_dt.astimezone(ZoneInfo("UTC")).strftime("%H:%M")
@@ -339,7 +339,7 @@ class PlaytomicClient:
         if filtered_slots:
             logger.info(f"Found {len(filtered_slots)} slots matching criteria{filter_msg}")
             if log_slots:
-                assert timezone is not None  # Already validated on line 301
+                assert timezone is not None
                 _print_results(filtered_slots, timezone)
         else:
             logger.warning(f"No slots found matching criteria{filter_msg}")
