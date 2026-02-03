@@ -1,86 +1,269 @@
 # Playtomic CLI & AI Agent
 
 > [!WARNING]
-> This project is a **Work in Progress**. Features and APIs are subject to change.
+> This project is under **active development**. Features and APIs may change.
 
+An AI-powered assistant and comprehensive toolkit for finding available Padel court slots on Playtomic. The project features a LangGraph-based agent that enables natural language interaction for slot search, along with a powerful Python client library and CLI.
 
-An AI-powered assistant and utility to find available Padel court slots on Playtomic. This project now features a LangGraph-based agent that can search for slots, check for weekends, and generate booking links through natural language interactions.
+## ✨ Features
 
-## Features
+- **🤖 AI Agent (LangGraph)**: Natural language interface to find the perfect slot
+- **🐍 Python Client Library**: Class-based APIclient with full type hints
+- **💻 Command-Line Interface**: Direct CLI for quick searches
+- **🔍 Advanced Filtering**:
+  - Filter by club (slug or name)
+  - Filter by court type (SINGLE or DOUBLE)
+  - Filter by time range with timezone support
+  - Filter by slot duration (60, 90, 120 minutes)
+- **🛡️ Robust Error Handling**: Custom exceptions for better debugging
+- **✅ Fully Tested**: Comprehensive test suite with 65%+ coverage
 
-- **AI Agent (LangGraph)**: Talk to an AI assistant to find the perfect slot.
-- **Automated Retrieval**: Fetches court information and availability directly from Playtomic.
-- **Flexible Filtering**:
-  - Filter by club (via slug).
-  - Filter by court type ("SINGLE" or "DOUBLE").
-  - Filter by time range (start and end time).
-  - Filter by slot duration (60, 90, 120 minutes).
-- **CLI Support**: Direct command-line interface for quick searches.
+## 📦 Installation
 
-## Installation
+### From Source
 
-1.  Clone the repository.
-2.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+git clone https://github.com/DavidSchmidt00/playtomic-agent.git
+cd playtomic-agent
+pip install -e .
+```
 
-## Configuration
+### With Development Dependencies
 
-The AI Agent requires Google Gemini API keys. You can set them as environment variables or in an `.env` file.
+```bash
+pip install -e ".[dev]"
+```
 
-1.  Obtain Gemini API keys from the [Google AI Studio](https://aistudio.google.com/).
-2.  Set the following environment variables:
-    ```bash
-    export GEMINI_API_KEY_1="your_first_key"  # Used for free-tier/testing
-    export GEMINI_API_KEY_2="your_second_key" # Used for higher rate limits/pro models
-    ```
+## ⚙️ Configuration
 
-## Usage
+The application uses environment variables for configuration. Create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+### Required Environment Variables
+
+```bash
+# Google Gemini API Keys (get from https://aistudio.google.com/)
+GEMINI_API_KEY_FREE=your_free_tier_key
+GEMINI_API_KEY_PAID=your_paid_tier_key
+
+# Optional Configuration
+DEFAULT_TIMEZONE=Europe/Berlin
+DEFAULT_MODEL=gemini-3-flash-preview
+PLAYTOMIC_API_BASE_URL=https://api.playtomic.io/v1
+```
+
+## 🚀 Usage
 
 ### 1. AI Agent (Natural Language)
 
-You can interact with the agent through the provided script or using LangGraph tools.
-
-**Run the Agent locally:**
-```bash
-PYTHONPATH=./playtomic-agent python playtomic-agent/agent.py
-```
-
-**Example Query:**
-> "Search for the next available 90 minutes slot for a double court at xy-club on between 18:00 and 20:00. Search until you find one."
-
-### 2. CLI Slot Finder (Direct Search)
-
-For a more traditional CLI experience, use the client utility:
+#### Using LangGraph Studio/API
 
 ```bash
-PYTHONPATH=./playtomic-agent python playtomic-agent/playtomic_client/client.py [options]
+cd src/playtomic_agent
+langgraph dev
 ```
 
-#### CLI Arguments
+Then interact through the LangGraph Studio UI or API.
 
-| Argument | Description | Default |
-| :--- | :--- | :--- |
-| `--club-slug` | The slug of the club to search for. | None |
-| `--date` | Date to check in `YYYY-MM-DD` format. | Today's date |
-| `--court-type` | Filter by court type (`SINGLE`, `DOUBLE`). | All courts |
-| `--start-time` | Start time to search from in `HH:MM` format. | None |
-| `--end-time` | End time to search until in `HH:MM` format. | None |
-| `--duration` | Filter by slot duration (60, 90, 120 minutes). | Any |
-| `--timezone` | Timezone to use for time calculations. | `Europe/Berlin` |
+#### Programmatic Usage
 
-#### Examples
+```python
+from playtomic_agent.agent import playtomic_agent
 
-**Find all slots for a club today:**
+# Stream agent responses
+for chunk in playtomic_agent.stream(
+    {"messages": [{"role": "user", "content":
+        "Find a 90-minute double court slot at lemon-padel-club "
+        "tomorrow between 18:00 and 20:00"
+    }]},
+    stream_mode="updates",
+):
+    for step, data in chunk.items():
+        print(f"{step}: {data['messages'][-1].content}")
+```
+
+### 2. Python Client Library
+
+The modern, class-based client provides full control:
+
+```python
+from playtomic_agent.client.api import PlaytomicClient
+
+# Use as context manager for automatic cleanup
+with PlaytomicClient() as client:
+    # Find available slots
+    slots = client.find_slots(
+        club_slug="lemon-padel-club",
+        date="2026-02-15",
+        court_type="DOUBLE",
+        start_time="18:00",
+        end_time="20:00",
+        timezone="Europe/Berlin",
+        duration=90
+    )
+
+    for slot in slots:
+        print(f"{slot.court_name}: {slot.time} - {slot.price}")
+        print(f"Book: {slot.get_link()}")
+```
+
+#### Advanced Usage with Direct Methods
+
+```python
+from playtomic_agent.client.api import PlaytomicClient
+
+with PlaytomicClient() as client:
+    # 1. Get club information
+    club = client.get_club(slug="lemon-padel-club")
+    print(f"Club: {club.name} ({len(club.courts)} courts)")
+
+    # 2. Get all available slots
+    available_slots = client.get_available_slots(
+        club,
+        date="2026-02-15",
+        start_time="18:00",  # UTC
+        end_time="20:00"
+    )
+
+    # 3. Filter manually
+    filtered = client.filter_slots(
+        club,
+        available_slots,
+        court_type="DOUBLE",
+        duration=90
+    )
+```
+
+### 3. Command-Line Interface
+
+Quick searches from the terminal:
+
 ```bash
-PYTHONPATH=./playtomic-agent python playtomic-agent/playtomic_client/client.py --club-slug xy-club
+# Find all slots for today
+playtomic-agent --club-slug lemon-padel-club
+
+# Find 90-minute double court slots tomorrow
+playtomic-agent \
+    --club-slug lemon-padel-club \
+    --date 2026-02-15 \
+    --court-type DOUBLE \
+    --duration 90 \
+    --start-time 18:00 \
+    --end-time 20:00 \
+    --timezone Europe/Berlin
+
+# Output as JSON
+playtomic-agent --club-slug lemon-padel-club --json
+
+# Verbose mode
+playtomic-agent --club-slug lemon-padel-club -v
 ```
 
-## How it works
+## 🏗️ Architecture
 
-1.  **AI Orchestration**: The LangGraph agent uses tools to fetch availability, check dates, and process your requests.
-2.  **Court Discovery**: The system identifies resources and court types for the specified club.
-3.  **Availability Fetching**: Queries the Playtomic API directly for real-time data.
-4.  **Matching & Filtering**: Matches availability with identified courts and applies your specific criteria.
+```
+playtomic-agent/
+├── src/playtomic_agent/         # Main package
+│   ├── agent.py                 # LangGraph AI agent
+│   ├── tools.py                 # LangChain tools for agent
+│   ├── config.py                # Configuration management
+│   ├── models.py                # Pydantic data models
+│   ├── client/                  # API client package
+│   │   ├── api.py               # PlaytomicClient class
+│   │   ├── exceptions.py        # Custom exceptions
+│   │   ├── utils.py             # Utility functions
+│   │   └── cli.py               # CLI implementation
+│   └── langgraph.json           # LangGraph configuration
+├── tests/                       # Comprehensive test suite
+│   ├── conftest.py              # Pytest fixtures
+│   ├── test_models.py           # Model tests
+│   ├── test_exceptions.py       # Exception tests
+│   └── test_client.py           # Client tests
+├── pyproject.toml               # Modern Python packaging
+└── .env                         # Environment configuration
+```
 
+## 🧪 Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=src/playtomic_agent --cov-report=html
+
+# Run specific test file
+pytest tests/test_client.py -v
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/ tests/
+
+# Lint
+ruff check src/ tests/
+
+# Type checking
+mypy src/
+```
+
+## 📚 API Reference
+
+### PlaytomicClient
+
+Main client class for interacting with the Playtomic API.
+
+**Methods:**
+- `get_club(slug=None, name=None)` - Fetch club information
+- `get_available_slots(club, date, start_time=None, end_time=None)` - Get available slots
+- `filter_slots(club, available_slots, court_type=None, duration=None)` - Filter slots
+- `find_slots(club_slug, date, **filters)` - Convenience method combining all steps
+
+**Exceptions:**
+- `ClubNotFoundError` - Club not found
+- `MultipleClubsFoundError` - Multiple clubs match identifier
+- `APIError` - API request failed
+- `ValidationError` - Invalid input parameters
+
+### Models
+
+All models are Pydantic models with full validation:
+
+- `Club` - Represents a Playtomic club
+- `Court` - Represents a court (single/double)
+- `Slot` - Represents an available time slot
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create a feature branch
+3. Install development dependencies: `pip install -e ".[dev]"`
+4. Write tests for new features
+5. Ensure all tests pass: `pytest tests/`
+6. Format code: `black src/ tests/`
+7. Submit a pull request
+
+## 📝 License
+
+MIT
+
+## 🙏 Acknowledgments
+
+- Built with [LangGraph](https://github.com/langchain-ai/langgraph) for AI agent orchestration
+- Powered by [Google Gemini](https://ai.google.dev/) for natural language understanding
+- Uses the Playtomic API for court availability data
+
+## 🔗 Links
+
+- [Documentation](https://github.com/DavidSchmidt00/playtomic-agent)
+- [Issue Tracker](https://github.com/DavidSchmidt00/playtomic-agent/issues)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
