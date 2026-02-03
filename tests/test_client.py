@@ -4,13 +4,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from playtomic_agent.client.api import PlaytomicClient, find_slots
+from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import (
     APIError,
     ClubNotFoundError,
     MultipleClubsFoundError,
     ValidationError,
 )
+from playtomic_agent.models import Slot
 
 
 class TestPlaytomicClient:
@@ -113,35 +114,36 @@ class TestPlaytomicClient:
         client = PlaytomicClient()
         slots = client.get_available_slots(sample_club, "2026-02-15")
 
-        assert slots.club_id == sample_club.club_id
-        assert slots.date == "2026-02-15"
-        assert len(slots.slots) > 0
+        # get_available_slots now returns a list of Slot objects
+        assert isinstance(slots, list)
+        assert len(slots) > 0
+        assert all(isinstance(slot, Slot) for slot in slots)
 
-    def test_filter_slots_by_court_type(self, sample_club, sample_available_slots):
+    def test_filter_slots_by_court_type(self, sample_club, sample_slots):
         """Test filtering slots by court type."""
         client = PlaytomicClient()
 
         # Filter for double courts
-        double_slots = client.filter_slots(sample_club, sample_available_slots, court_type="DOUBLE")
+        double_slots = client.filter_slots(sample_club, sample_slots, court_type="DOUBLE")
         assert len(double_slots) == 2
         assert all(s.court_id in ["court-1", "court-3"] for s in double_slots)
 
         # Filter for single courts
-        single_slots = client.filter_slots(sample_club, sample_available_slots, court_type="SINGLE")
+        single_slots = client.filter_slots(sample_club, sample_slots, court_type="SINGLE")
         assert len(single_slots) == 1
         assert single_slots[0].court_id == "court-2"
 
-    def test_filter_slots_by_duration(self, sample_club, sample_available_slots):
+    def test_filter_slots_by_duration(self, sample_club, sample_slots):
         """Test filtering slots by duration."""
         client = PlaytomicClient()
 
         # Filter for 90-minute slots
-        slots_90 = client.filter_slots(sample_club, sample_available_slots, duration=90)
+        slots_90 = client.filter_slots(sample_club, sample_slots, duration=90)
         assert len(slots_90) == 2
         assert all(s.duration == 90 for s in slots_90)
 
         # Filter for 60-minute slots
-        slots_60 = client.filter_slots(sample_club, sample_available_slots, duration=60)
+        slots_60 = client.filter_slots(sample_club, sample_slots, duration=60)
         assert len(slots_60) == 1
         assert slots_60[0].duration == 60
 
@@ -150,20 +152,3 @@ class TestPlaytomicClient:
         client = PlaytomicClient()
         with pytest.raises(ValidationError, match="timezone is required"):
             client.find_slots(club_slug="test-club", date="2026-02-15", start_time="10:00")
-
-
-class TestBackwardCompatibility:
-    """Tests for backward-compatible find_slots function."""
-
-    @patch("playtomic_agent.client.api.PlaytomicClient")
-    def test_find_slots_returns_none_on_error(self, mock_client_class):
-        """Test that backward-compatible function returns None on error."""
-        # Setup mock to raise exception
-        mock_client = Mock()
-        mock_client.__enter__ = Mock(return_value=mock_client)
-        mock_client.__exit__ = Mock(return_value=False)
-        mock_client.find_slots.side_effect = APIError("Test error")
-        mock_client_class.return_value = mock_client
-
-        result = find_slots("test-club", "2026-02-15")
-        assert result is None
