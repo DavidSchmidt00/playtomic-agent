@@ -162,7 +162,36 @@ playtomic-agent --club-slug lemon-padel-club --json
 playtomic-agent --club-slug lemon-padel-club -v
 ```
 
-## 🏗️ Architecture
+## � Web UI (Experimental) ✅
+
+A minimal, extensible web frontend is included to interact with the LangGraph-based Playtomic agent. The frontend is a small React app (Vite) that talks to a FastAPI endpoint exposed by the Python service. It provides a centered chat UI with Markdown rendering and a loading indicator.
+
+Quick start (Dev Container):
+
+1. Install Python dependencies and start the API server (port 8082):
+
+```bash
+pip install -e .
+uvicorn playtomic_agent.api:app --host 0.0.0.0 --port 8082
+```
+
+2. Start the frontend (port 8080):
+
+```bash
+cd web
+npm install
+npm run dev -- --port 8080
+```
+
+3. Open your browser at http://localhost:8080 to use the chat interface.
+
+Notes:
+- The frontend only displays the final assistant reply (internal reasoning/tool output is hidden).
+- Add API-related settings (e.g. GEMINI API keys) to `.env` when using the agent for real runs.
+
+---
+
+## �🏗️ Architecture
 
 ```
 playtomic-agent/

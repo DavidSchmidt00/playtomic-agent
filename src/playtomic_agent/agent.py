@@ -56,7 +56,7 @@ if __name__ == "__main__":
                     "role": "user",
                     "content": """
                                             Search for the next available 90 minutes slot for a double court at lemon-padel-club on
-                                            between 18:00 and 20:00. Search until you found one.
+                                            after 12:00. Search until you found one.
                                             """,
                 }
             ]
@@ -64,5 +64,5 @@ if __name__ == "__main__":
         stream_mode="updates",
     ):
         for step, data in chunk.items():
-            print(f"step: {step}")
-            print(f"content: {data['messages'][-1].content_blocks[0].text}")
+            print(f"\nstep: {step}\n")
+            print(data)

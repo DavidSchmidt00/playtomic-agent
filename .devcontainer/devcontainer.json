@@ -6,25 +6,27 @@
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.13-bullseye",
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-		"ghcr.io/devcontainers/features/python:1": {},
-		"ghcr.io/devcontainers/features/git:1": {}
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "latest"
+		},
+		"ghcr.io/eliises/devcontainer-features/devcontainers-cli:1": {}
 	},
 	"forwardPorts": [
-		8080
+		8080,
+		8081,
+		8082
 	],
-	"postCreateCommand": "pip3 install -U -r requirements.txt",
+	"postCreateCommand": "pip3 install -e .[dev]",
 	"runArgs": [
 		"--env-file",
-		"./APIKEY.env"
+		"${localWorkspaceFolder}/.env"
 	],
 	"customizations": {
 		"vscode": {
-			"extensions": [
-				"ms-azuretools.vscode-containers"
-			]
+			"extensions": []
 		}
 	},
 	"containerEnv": {
-		"PYTHONPATH": "$PYTHONPATH:/workspaces/playtomic-agent"
+		"PYTHONPATH": "$PYTHONPATH:/workspaces/padel-agent/src"
 	}
 }
