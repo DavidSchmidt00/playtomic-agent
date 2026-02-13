@@ -108,10 +108,11 @@ body {
    App Layout
    ═══════════════════════════════════════════════════════ */
 .app-root {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
 }
 
 /* ─── Header ─── */
@@ -192,7 +193,9 @@ body {
   flex-direction: column;
   align-items: center;
   flex: 1;
+  min-height: 0;
   gap: 0.75rem;
+  overflow: hidden;
 }
 
 /* ─── Profile Card ─── */
@@ -206,6 +209,8 @@ body {
   box-shadow: var(--shadow-bubble);
   animation: fadeSlideIn 0.3s ease-out;
   transition: background var(--transition-speed), border-color var(--transition-speed);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .profile-header {
@@ -363,8 +368,8 @@ body {
 .chat-box {
   width: 100%;
   max-width: 640px;
-  height: 600px;
-  flex: 0 0 600px;
+  flex: 1;
+  min-height: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -640,8 +645,6 @@ body {
   .chat-box {
     padding: 0.75rem;
     border-radius: var(--radius-md);
-    height: 78vh;
-    max-height: none;
   }
 
   .bubble {
