@@ -21,6 +21,8 @@ services:
     environment:
       # Ensure PYTHONPATH is set
       PYTHONPATH: "${PYTHONPATH}:/workspace/src"
+      # Prevent Python from buffering stdout/stderr
+      PYTHONUNBUFFERED: "1"
     working_dir: /workspace
     # Keep container running
     command: sleep infinity
