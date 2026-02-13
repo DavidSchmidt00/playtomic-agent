@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -7,22 +7,32 @@ export default function Chat() {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const messagesEndRef = useRef(null)
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function sendPrompt(e) {
     e.preventDefault()
     if (!input.trim()) return
 
     const prompt = input.trim()
-    setMessages((m) => [...m, { role: 'user', text: prompt }])
+    const newUserMsg = { role: 'user', text: prompt }
+    const updatedMessages = [...messages, newUserMsg]
+    setMessages(updatedMessages)
     setInput('')
     setLoading(true)
     setError(null)
 
     try {
+      // Send full conversation history so the agent remembers context
+      const history = updatedMessages.map((m) => ({ role: m.role, content: m.text }))
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ messages: history }),
       })
 
       if (!res.ok) {
@@ -54,6 +64,7 @@ export default function Chat() {
               </div>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
 
         <form className="input-row" onSubmit={sendPrompt}>

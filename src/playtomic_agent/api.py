@@ -17,7 +17,8 @@ app.add_middleware(
 
 
 class ChatRequest(BaseModel):
-    prompt: str
+    prompt: str | None = None
+    messages: list[dict] | None = None
     # optional settings for future use
     timezone: str | None = None
 
@@ -33,8 +34,13 @@ async def chat(req: ChatRequest):
     This function intentionally keeps the output minimal and does not expose any
     tool calls or internal reasoning.
     """
-    # Prepare input for the agent
-    messages = [{"role": "user", "content": req.prompt}]
+    # Prepare input for the agent – use full history when available
+    if req.messages:
+        messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
+    elif req.prompt:
+        messages = [{"role": "user", "content": req.prompt}]
+    else:
+        raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
 
     # Try streaming to capture the final assistant text
     final_text = None
