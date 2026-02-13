@@ -139,14 +139,28 @@ with PlaytomicClient() as client:
 
 ### 3. Command-Line Interface
 
-Quick searches from the terminal:
+The CLI supports two main modes: `search` and `slots`.
+
+#### Search for Clubs
+Find clubs by location (using geocoding) or by name.
+
+```bash
+# Search by Location
+playtomic-agent search --location "Berlin"
+
+# Search by Name
+playtomic-agent search --name "Lemon Padel"
+```
+
+#### Find Available Slots
+Find slots for a specific club.
 
 ```bash
 # Find all slots for today
-playtomic-agent --club-slug lemon-padel-club
+playtomic-agent slots --club-slug lemon-padel-club
 
 # Find 90-minute double court slots tomorrow
-playtomic-agent \
+playtomic-agent slots \
     --club-slug lemon-padel-club \
     --date 2026-02-15 \
     --court-type DOUBLE \
@@ -156,10 +170,7 @@ playtomic-agent \
     --timezone Europe/Berlin
 
 # Output as JSON
-playtomic-agent --club-slug lemon-padel-club --json
-
-# Verbose mode
-playtomic-agent --club-slug lemon-padel-club -v
+playtomic-agent slots --club-slug lemon-padel-club --json
 ```
 
 ## � Web UI (Experimental) ✅

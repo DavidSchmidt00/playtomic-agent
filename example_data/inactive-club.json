@@ -1,0 +1,133 @@
+[
+    {
+        "default_currency": "EUR",
+        "tenant_id": "b070b098-0f50-4c60-a1f9-7e84ffb60b3d",
+        "tenant_uid": "sportpark-elz",
+        "tenant_type": "ANEMONE",
+        "tenant_status": "ACTIVE",
+        "tenant_name": "Sportpark Elz",
+        "address": {
+            "street": "Lattengasse 74a",
+            "postal_code": "65604",
+            "city": "Elz",
+            "sub_administrative_area": "Gießen",
+            "administrative_area": "Hessen",
+            "country": "Deutschland",
+            "country_code": "DE",
+            "coordinate": {
+                "lat": 50.4159803,
+                "lon": 8.0238314
+            },
+            "timezone": "Europe/Berlin"
+        },
+        "images": [
+            "https://res.cloudinary.com/playtomic/image/upload/v1770036260/pro/tenants/b070b098-0f50-4c60-a1f9-7e84ffb60b3d/1770036259697.jpg"
+        ],
+        "image_data": [
+            {
+                "image_id": "6d44b20c-09df-43ba-9716-20b611181a3d",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1770036260/pro/tenants/b070b098-0f50-4c60-a1f9-7e84ffb60b3d/1770036259697.jpg",
+                "client_type": "WEB"
+            },
+            {
+                "image_id": "12cc3423-97ba-4bd1-a287-21aaa032d27d",
+                "url": "https://res.cloudinary.com/playtomic/image/upload/v1770036261/pro/tenants/b070b098-0f50-4c60-a1f9-7e84ffb60b3d/1770036261214.jpg",
+                "client_type": "MOBILE"
+            }
+        ],
+        "properties": {},
+        "resources": [
+            {
+                "resource_id": "dce005aa-81da-483a-b746-b233898d4541",
+                "name": "Padel 1",
+                "description": "Padel 1",
+                "sport_id": "PADEL",
+                "reservation_priority": 0,
+                "is_active": true,
+                "merchant_resource_id": null,
+                "properties": {
+                    "resource_type": "indoor",
+                    "resource_size": "double",
+                    "resource_feature": "panoramic"
+                },
+                "booking_settings": {
+                    "start_time_policy": "ANY",
+                    "allowed_duration_increments": [
+                        60,
+                        120,
+                        90
+                    ],
+                    "is_bookable_online": true,
+                    "allows_onsite_payment": true,
+                    "shared_resources": []
+                }
+            }
+        ],
+        "booking_type": "PUBLIC",
+        "playtomic_status": "INACTIVE",
+        "is_playtomic_partner": false,
+        "default_cancelation_policy": {
+            "amount": 24,
+            "unit": "HOURS"
+        },
+        "opening_hours": {
+            "TUESDAY": {
+                "opening_time": "07:00",
+                "closing_time": "22:00"
+            },
+            "SUNDAY": {
+                "opening_time": "09:00",
+                "closing_time": "18:00"
+            },
+            "MONDAY": {
+                "opening_time": "08:00",
+                "closing_time": "22:00"
+            },
+            "WEDNESDAY": {
+                "opening_time": "08:00",
+                "closing_time": "22:00"
+            },
+            "THURSDAY": {
+                "opening_time": "08:00",
+                "closing_time": "22:00"
+            },
+            "SATURDAY": {
+                "opening_time": "09:00",
+                "closing_time": "18:00"
+            },
+            "FRIDAY": {
+                "opening_time": "07:00",
+                "closing_time": "22:00"
+            }
+        },
+        "communications_language": "de",
+        "onboarding_status": "FINISHED",
+        "booking_settings": {
+            "booking_ahead_limit": 30240,
+            "max_consecutive_bookable_time": 360,
+            "max_bookable_time_per_day": 600,
+            "max_number_of_active_bookings": null,
+            "max_number_of_bookings_per_day": null
+        },
+        "created_at": "2025-12-16T13:04:30",
+        "slug": "sportpark-elz",
+        "sport_ids": [
+            "PADEL"
+        ],
+        "tenant_hostname": "anemone",
+        "cancelation_policies": [
+            {
+                "sport_id": "PADEL",
+                "duration": {
+                    "amount": 24,
+                    "unit": "HOURS"
+                },
+                "sport_ids": [
+                    "PADEL"
+                ]
+            }
+        ],
+        "vat_rate": 0.21,
+        "url": "https://api.syltek.com"
+    }
+]

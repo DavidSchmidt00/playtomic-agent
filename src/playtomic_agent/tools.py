@@ -60,3 +60,53 @@ def create_booking_link(
 @tool(description="Returns whether a date is a weekend.")
 def is_weekend(date: Annotated[str, "The date to check (YYYY-MM-DD)"]):
     return datetime.strptime(date, "%Y-%m-%d").weekday() >= 5
+
+
+@tool(description="Finds clubs by location (city, region, or address). Use this when the user mentions a place (e.g. 'Clubs in Berlin').")
+def find_clubs_by_location(
+    query: Annotated[str, "The search query (e.g. 'Berlin', 'Munich', 'Cologne')"],
+) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
+    """Finds clubs near a specific location using geocoding."""
+    try:
+        with PlaytomicClient() as client:
+            coordinates = client.geocode(query)
+            if not coordinates:
+                return None
+            
+            lat, lon = coordinates
+            clubs = client.search_clubs(query, lat=lat, lon=lon)
+            
+            # Limit to top 5 result
+            return [
+                {
+                    "name": club.name,
+                    "slug": club.slug,
+                    "id": club.club_id,
+                    "timezone": club.timezone,
+                }
+                for club in clubs[:5]
+            ]
+    except Exception:
+        return None
+
+@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club').")
+def find_clubs_by_name(
+    name: Annotated[str, "The club name to search for"],
+) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
+    """Finds clubs matching a specific name."""
+    try:
+        with PlaytomicClient() as client:
+            # Use tenant_name search
+            clubs = client.search_clubs(name)
+            
+            return [
+                {
+                    "name": club.name,
+                    "slug": club.slug,
+                    "id": club.club_id,
+                    "timezone": club.timezone,
+                }
+                for club in clubs[:5]
+            ]
+    except Exception:
+        return None

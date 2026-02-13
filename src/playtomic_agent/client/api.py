@@ -138,6 +138,112 @@ class PlaytomicClient:
         except (KeyError, TypeError) as e:
             raise APIError(f"Failed to parse club data: {e}") from e
 
+    def geocode(self, query: str) -> tuple[float, float] | None:
+        """Geocode a query string to coordinates using OpenStreetMap Nominatim.
+
+        Args:
+            query: The address or place to search for.
+
+        Returns:
+            tuple[float, float] | None: The (latitude, longitude) or None if not found.
+        """
+        try:
+            # Respect Nominatim policy with User-Agent
+            headers = {"User-Agent": "PlaytomicAgent/1.0 (Educational Project)"}
+            response = requests.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": query, "format": "json", "limit": 1},
+                headers=headers,
+                timeout=5,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if data and len(data) > 0:
+                return float(data[0]["lat"]), float(data[0]["lon"])
+            return None
+        except Exception as e:
+            logger.warning(f"Geocoding failed for '{query}': {e}")
+            return None
+
+    def search_clubs(
+        self, query: str, lat: float | None = None, lon: float | None = None, radius: int = 50000
+    ) -> list[Club]:
+        """Search for clubs by name or location.
+
+        Args:
+            query: The search query (used for text filtering if coordinates provided, or ignored by API).
+            lat: Optional latitude for location-based search.
+            lon: Optional longitude for location-based search.
+            radius: Radius in meters (default 50km).
+
+        Returns:
+            List of matching clubs
+        """
+        try:
+            params = {}
+            if lat is not None and lon is not None:
+                params = {
+                    "sport_id": "PADEL",
+                    "coordinate": f"{lat},{lon}",
+                    "radius": radius,
+                }
+            else:
+                params = {"tenant_name": query}
+
+            response = self.session.get(
+                f"{self.api_base_url}/tenants",
+                params=params,
+                timeout=10,
+            )
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise APIError(f"Failed to search clubs with query: {query}") from e
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            raise APIError("Invalid JSON response from API") from e
+
+        clubs = []
+        for club_data in data:
+            try:
+                # Some results might not be valid clubs or missing fields
+                if "tenant_id" not in club_data and "id" not in club_data:
+                    continue
+
+                # Filter out inactive clubs
+                if club_data.get("playtomic_status") == "INACTIVE":
+                    logger.debug(f"Skipping inactive club: {club_data.get('tenant_name')}")
+                    continue
+
+                # Handle variations in API response structure
+                club_id = club_data.get("tenant_id") or club_data.get("id")
+                name = club_data.get("tenant_name") or club_data.get("name")
+                slug = club_data.get("tenant_uid") or club_data.get("slug") or club_data.get("link") or ""
+                
+                # Timezone might be nested in address or direct
+                timezone = club_data.get("timezone")
+                if not timezone:
+                    timezone = club_data.get("address", {}).get("time_zone", "UTC")
+
+                if not club_id or not name:
+                    continue
+
+                club = Club(
+                    slug=slug,
+                    name=name,
+                    club_id=club_id,
+                    timezone=timezone,
+                    courts=[],  # We don't fetch courts for search results
+                )
+                clubs.append(club)
+            except (KeyError, TypeError) as e:
+                logger.warning(f"Skipping invalid club data: {e}")
+                continue
+
+        logger.info(f"Found {len(clubs)} clubs for query '{query}'")
+        return clubs
+
     def get_available_slots(
         self,
         club: Club,
