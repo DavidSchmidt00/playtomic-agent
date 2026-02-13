@@ -213,3 +213,10 @@ __marimo__/
 *.env
 !.env.example
 example_data/example-prompts.md
+
+# Node / Frontend
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+npm-debug.log*

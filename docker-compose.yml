@@ -1,0 +1,29 @@
+services:
+  padel-agent-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: padel-agent-dev
+    volumes:
+      # Mount project directory to /workspace
+      - .:/workspace
+      # Preserve node_modules and Python cache
+      - /workspace/web/node_modules
+      - /workspace/.venv
+    ports:
+      # Forward ports (matching devcontainer)
+      - "8080:8080" # Web UI
+      - "8081:8081" # LangGraph Studio
+      - "8082:8082" # FastAPI
+    env_file:
+      # Load environment variables from .env
+      - .env
+    environment:
+      # Ensure PYTHONPATH is set
+      PYTHONPATH: "${PYTHONPATH}:/workspace/src"
+    working_dir: /workspace
+    # Keep container running
+    command: sleep infinity
+    # Enable interactive terminal
+    stdin_open: true
+    tty: true
