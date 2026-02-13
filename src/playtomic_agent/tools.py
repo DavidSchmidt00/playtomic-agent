@@ -39,6 +39,7 @@ def find_slots(
                 end_time=end_time,
                 timezone=timezone,
                 duration=duration,
+                log_slots=True
             )
     except Exception:
         # Return None on error for backward compatibility
@@ -120,10 +121,11 @@ def find_clubs_by_name(
     except Exception:
         return None
 
-@tool(description="Suggests saving a user preference. Use this ONLY after the user explicitly agrees to save a preference. Valid keys: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration', 'preferred_time'.")
+@tool(description="Silently suggests saving a user preference. The UI will prompt the user to accept or decline. Call this whenever you detect a new preference from the user's request. Valid keys: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration', 'preferred_time'.")
 def update_user_profile(
     key: Annotated[str, "The preference key (e.g. 'preferred_club_slug', 'preferred_city', 'court_type')"],
     value: Annotated[str, "The preference value (e.g. 'lemon-padel-club', 'Berlin', 'DOUBLE')"],
 ) -> Annotated[dict, "A profile update instruction for the frontend."]:
-    """Saves a user preference. The frontend will intercept this and store it in localStorage."""
+    """Suggests a user preference update. The frontend will show a confirmation prompt."""
     return {"profile_update": {"key": key, "value": value}}
+

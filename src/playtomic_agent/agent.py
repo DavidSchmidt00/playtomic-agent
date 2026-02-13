@@ -46,8 +46,8 @@ def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
 
 # Initialize language model with rate limiter
 gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    # model="gemini-3-flash-preview",
+    # model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     google_api_key=settings.gemini_api_key,
     rate_limiter=create_rate_limiter(10),
 )
@@ -93,9 +93,9 @@ TOOL USAGE RULES:
 - If tools return no results, try `find_clubs_by_location` as a fallback before giving up.
 
 PREFERENCE MANAGEMENT:
-- When the user's request implies a preference (e.g., they always search for the same club or court type), suggest saving it.
-- Example: "Would you like me to remember Lemon Padel as your preferred club for future searches?"
-- Only call `update_user_profile` AFTER the user explicitly confirms they want to save.
+- When the user's request contains a preference (e.g., a specific club, court type, or duration), silently call `update_user_profile` to suggest saving it.
+- Do NOT ask the user in chat whether to save preferences. The UI will handle the confirmation.
+- Do NOT mention that you are saving or suggesting preferences in your chat response.
 - Do NOT suggest preferences the user already has saved.
 
 Format your responses using Markdown:
