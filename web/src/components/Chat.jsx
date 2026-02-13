@@ -12,7 +12,7 @@ export default function Chat() {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
   async function sendPrompt(e) {
     e.preventDefault()
@@ -55,7 +55,12 @@ export default function Chat() {
     <div className="chat-container">
       <div className="chat-box">
         <div className="messages">
-          {messages.length === 0 && <div className="empty">Send a prompt to start the assistant.</div>}
+          {messages.length === 0 && (
+            <div className="empty">
+              <span className="empty-icon">🎾</span>
+              Ask me to find or book a padel court!
+            </div>
+          )}
 
           {messages.map((m, idx) => (
             <div key={idx} className={`message ${m.role}`}>
@@ -64,27 +69,32 @@ export default function Chat() {
               </div>
             </div>
           ))}
+
+          {loading && (
+            <div className="message assistant">
+              <div className="bubble typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
         <form className="input-row" onSubmit={sendPrompt}>
           <input
             aria-label="Prompt"
-            placeholder="Ask to find or book a padel slot e.g. 'Find a 90-minute double court at lemon-padel-club tomorrow between 18:00 and 20:00'"
+            placeholder="e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={loading}
           />
           <button type="submit" disabled={loading || !input.trim()}>
-            {loading ? 'Waiting...' : 'Send'}
+            {loading ? '...' : 'Send'}
           </button>
         </form>
-        {loading && (
-          <div className="loading">
-            <div className="spinner" />
-            <div className="loading-text">Agent is processing your request...</div>
-          </div>
-        )}
         {error && <div className="error">{error}</div>}
       </div>
     </div>
