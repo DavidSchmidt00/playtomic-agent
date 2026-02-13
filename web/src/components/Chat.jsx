@@ -65,7 +65,18 @@ export default function Chat() {
           {messages.map((m, idx) => (
             <div key={idx} className={`message ${m.role}`}>
               <div className="bubble">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {m.text}
+                </ReactMarkdown>
               </div>
             </div>
           ))}

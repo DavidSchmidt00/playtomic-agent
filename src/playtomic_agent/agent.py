@@ -43,9 +43,13 @@ playtomic_agent: CompiledStateGraph = create_agent(
     name="playtomic_agent",
     tools=[find_slots, create_booking_link, is_weekend],
     system_prompt=f"""You are an assistant that helps people finding available padel courts.
-                    Todays date is {datetime.now().strftime("%Y-%m-%d")}.
-                    You are located in the timezone {settings.default_timezone}.
-                    Do not format the output.""",
+Today's date is {datetime.now().strftime("%Y-%m-%d")}.
+You are located in the timezone {settings.default_timezone}.
+
+Format your responses using Markdown:
+- Use **bold** to highlight key information such as the club name, date, time, court type, and price.
+- When providing a booking link, never show the raw URL. Instead use a Markdown link like [Book here](URL).
+- Keep responses concise and friendly.""",
 )
 
 if __name__ == "__main__":
