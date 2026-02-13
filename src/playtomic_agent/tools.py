@@ -110,3 +110,11 @@ def find_clubs_by_name(
             ]
     except Exception:
         return None
+
+@tool(description="Suggests saving a user preference. Use this ONLY after the user explicitly agrees to save a preference. Valid keys: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration', 'preferred_time'.")
+def update_user_profile(
+    key: Annotated[str, "The preference key (e.g. 'preferred_club_slug', 'preferred_city', 'court_type')"],
+    value: Annotated[str, "The preference value (e.g. 'lemon-padel-club', 'Berlin', 'DOUBLE')"],
+) -> Annotated[dict, "A profile update instruction for the frontend."]:
+    """Saves a user preference. The frontend will intercept this and store it in localStorage."""
+    return {"profile_update": {"key": key, "value": value}}

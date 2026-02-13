@@ -6,10 +6,26 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.state import CompiledStateGraph
 
 from playtomic_agent.config import get_settings
-from playtomic_agent.tools import create_booking_link, find_slots, is_weekend, find_clubs_by_location, find_clubs_by_name
+from playtomic_agent.tools import (
+    create_booking_link,
+    find_clubs_by_location,
+    find_clubs_by_name,
+    find_slots,
+    is_weekend,
+    update_user_profile,
+)
 
 # Load settings
 settings = get_settings()
+
+TOOLS = [
+    find_slots,
+    create_booking_link,
+    is_weekend,
+    find_clubs_by_location,
+    find_clubs_by_name,
+    update_user_profile,
+]
 
 
 def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
@@ -37,12 +53,27 @@ gemini = ChatGoogleGenerativeAI(
 )
 llm = gemini
 
-# Create the playtomic agent
-playtomic_agent: CompiledStateGraph = create_agent(
-    model=llm,
-    name="playtomic_agent",
-    tools=[find_slots, create_booking_link, is_weekend, find_clubs_by_location, find_clubs_by_name],
-    system_prompt=f"""You are a specialized assistant dedicated ONLY to helping people find available padel courts.
+
+def _build_system_prompt(user_profile: dict | None = None) -> str:
+    """Build the system prompt, optionally injecting user profile context."""
+    profile_section = ""
+    if user_profile:
+        prefs = []
+        if user_profile.get("preferred_club_name"):
+            prefs.append(f"- Preferred club: {user_profile['preferred_club_name']} (slug: {user_profile.get('preferred_club_slug', 'unknown')})")
+        if user_profile.get("preferred_city"):
+            prefs.append(f"- Preferred city: {user_profile['preferred_city']}")
+        if user_profile.get("court_type"):
+            prefs.append(f"- Preferred court type: {user_profile['court_type']}")
+        if user_profile.get("duration"):
+            prefs.append(f"- Preferred duration: {user_profile['duration']} minutes")
+        if user_profile.get("preferred_time"):
+            prefs.append(f"- Preferred time: {user_profile['preferred_time']}")
+
+        if prefs:
+            profile_section = "\n\nUSER PREFERENCES (from previous sessions):\n" + "\n".join(prefs) + "\nUse these as defaults when the user doesn't specify. Do NOT ask for these values if they are already set."
+
+    return f"""You are a specialized assistant dedicated ONLY to helping people find available padel courts.
 Today's date is {datetime.now().strftime("%Y-%m-%d")}.
 You are located in the timezone {settings.default_timezone}.
 
@@ -58,11 +89,30 @@ TOOL USAGE RULES:
 - NEVER guess or make up club names. Only output clubs that were returned by the tools.
 - If tools return no results, honestly say "I couldn't find any clubs matching {{query}}".
 
+PREFERENCE MANAGEMENT:
+- When the user's request implies a preference (e.g., they always search for the same club or court type), suggest saving it.
+- Example: "Would you like me to remember Lemon Padel as your preferred club for future searches?"
+- Only call `update_user_profile` AFTER the user explicitly confirms they want to save.
+- Do NOT suggest preferences the user already has saved.
+
 Format your responses using Markdown:
 - Use **bold** to highlight key information such as the club name, date, time, court type, and price.
 - When providing a booking link, never show the raw URL. Instead use a Markdown link like [Book here](URL).
-- Keep responses concise and friendly.""",
-)
+- Keep responses concise and friendly.{profile_section}"""
+
+
+def create_playtomic_agent(user_profile: dict | None = None) -> CompiledStateGraph:
+    """Create the playtomic agent with an optional user profile injected into the system prompt."""
+    return create_agent(
+        model=llm,
+        name="playtomic_agent",
+        tools=TOOLS,
+        system_prompt=_build_system_prompt(user_profile),
+    )
+
+
+# Default agent instance (no profile) for backward compatibility
+playtomic_agent: CompiledStateGraph = create_playtomic_agent()
 
 if __name__ == "__main__":
     for chunk in playtomic_agent.stream(
