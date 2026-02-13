@@ -4,6 +4,16 @@ from pydantic import BaseModel
 
 from playtomic_agent.agent import playtomic_agent
 
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
 app = FastAPI(title="Playtomic Agent API")
 
 # Allow local frontend dev server access
@@ -45,23 +55,36 @@ async def chat(req: ChatRequest):
     # Try streaming to capture the final assistant text
     final_text = None
     try:
+        logging.debug(f"Starting agent with messages: {messages}")
         for chunk in playtomic_agent.stream({"messages": messages}, stream_mode="updates"):
             # chunk is a dict mapping step -> data
-            for _, data in chunk.items():
-                # Each data contains a list of messages; be permissive because
-                # message objects from the model may not always include a `role`.
+            for step, data in chunk.items():
+                logging.debug(f"Agent Step: {step}")
+                
+                # Log tool calls if present
+                if "messages" in data:
+                    for m in data["messages"]:
+                        if getattr(m, "tool_calls", None):
+                            logging.debug(f"Tool Calls: {m.tool_calls}")
+                        if getattr(m, "content", None):
+                            # Log a snippet of content
+                            content_str = str(m.content)
+                            if len(content_str) > 200:
+                                content_str = content_str[:200] + "..."
+                            logging.debug(f"Message Content: {content_str}")
+
+                # Proceed with extracting final text (existing logic)
                 for m in data.get("messages", []):
                     # Skip tool messages. ToolMessage instances often set a `tool_call_id`.
                     if getattr(m, "tool_call_id", None) is not None:
                         continue
-
+                    
                     role = getattr(m, "role", None)
                     # If role is present and not assistant, skip
                     if role is not None and role != "assistant":
                         continue
 
                     text = None
-                    # Try content_blocks (LangChain AIMessage-like)
                     try:
                         cbs = getattr(m, "content_blocks", None)
                         if cbs:
@@ -73,11 +96,12 @@ async def chat(req: ChatRequest):
                     except Exception:
                         pass
 
-                    # Fallback: some messages expose `content` as a list of dicts
                     if not text:
                         try:
                             content = getattr(m, "content", None)
-                            if isinstance(content, list | tuple):
+                            if isinstance(content, str):
+                                text = content
+                            elif isinstance(content, list | tuple):
                                 for item in content:
                                     if (
                                         isinstance(item, dict)
@@ -88,7 +112,7 @@ async def chat(req: ChatRequest):
                                         break
                         except Exception:
                             pass
-
+                    
                     if text:
                         final_text = text
 
@@ -126,7 +150,9 @@ async def chat(req: ChatRequest):
                         if not text:
                             try:
                                 content = getattr(m, "content", None)
-                                if isinstance(content, list | tuple):
+                                if isinstance(content, str):
+                                    text = content
+                                elif isinstance(content, list | tuple):
                                     for item in content:
                                         if (
                                             isinstance(item, dict)
@@ -146,6 +172,7 @@ async def chat(req: ChatRequest):
                 pass
 
     except Exception as exc:  # pragma: no cover - runtime dependent
+        logging.exception("Agent execution failed")
         raise HTTPException(status_code=500, detail=f"Agent execution error: {exc}") from exc
 
     if not final_text:
