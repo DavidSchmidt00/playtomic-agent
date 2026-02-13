@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 from fastapi import FastAPI, HTTPException
@@ -7,9 +8,10 @@ from pydantic import BaseModel
 
 from playtomic_agent.agent import create_playtomic_agent
 
-# Configure logging
+# Configure logging (use LOG_LEVEL env var, default to INFO)
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level, logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
