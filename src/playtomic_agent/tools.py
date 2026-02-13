@@ -89,16 +89,25 @@ def find_clubs_by_location(
     except Exception:
         return None
 
-@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club').")
+@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club'). Use only the core club name, without location suffixes.")
 def find_clubs_by_name(
-    name: Annotated[str, "The club name to search for"],
+    name: Annotated[str, "The core club name to search for (e.g. 'Lemon Padel', not 'Lemon Padel Club Limburg')"],
 ) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
-    """Finds clubs matching a specific name."""
+    """Finds clubs matching a specific name. Retries with shorter queries if needed."""
     try:
         with PlaytomicClient() as client:
-            # Use tenant_name search
             clubs = client.search_clubs(name)
-            
+
+            # If no results, try progressively shorter queries
+            # e.g. "Lemon Padel Club Limburg" -> "Lemon Padel Club" -> "Lemon Padel"
+            if not clubs:
+                words = name.split()
+                for length in range(len(words) - 1, 1, -1):
+                    shorter = " ".join(words[:length])
+                    clubs = client.search_clubs(shorter)
+                    if clubs:
+                        break
+
             return [
                 {
                     "name": club.name,
