@@ -115,6 +115,14 @@ body {
   overflow: hidden;
 }
 
+.app-root>main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 /* ─── Header ─── */
 .app-header {
   width: 100%;
