@@ -30,6 +30,8 @@ def find_slots(
 ) -> Annotated[dict | None, "A summary of available slots with count and details."]:
     """Find available slots using PlaytomicClient."""
     try:
+        from playtomic_agent.config import get_settings
+        effective_tz = timezone or get_settings().default_timezone
         with PlaytomicClient() as client:
             slots = client.find_slots(
                 club_slug=club_slug,
@@ -37,7 +39,7 @@ def find_slots(
                 court_type=court_type,
                 start_time=start_time,
                 end_time=end_time,
-                timezone=timezone,
+                timezone=effective_tz,
                 duration=duration,
                 log_slots=True
             )
@@ -45,8 +47,11 @@ def find_slots(
                 return {"count": 0, "slots": []}
 
             # Return compact summaries instead of raw objects
+            # Limit to 10 slots to keep LLM context manageable
+            display_slots = slots[:10]
             return {
                 "count": len(slots),
+                "showing": len(display_slots),
                 "date": date,
                 "slots": [
                     {
@@ -58,10 +63,12 @@ def find_slots(
                         "court_id": s.court_id,
                         "booking_time": s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     }
-                    for s in slots
+                    for s in display_slots
                 ],
             }
-    except Exception:
+    except Exception as exc:
+        import logging
+        logging.exception(f"find_slots failed: {exc}")
         return None
 
 

@@ -102,7 +102,7 @@ async def chat(req: ChatRequest):
 
     try:
         logging.debug(f"Starting agent with profile: {req.user_profile}")
-        for chunk in agent.stream({"messages": messages}, stream_mode="updates"):
+        for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 15}):
             for step, data in chunk.items():
                 logging.debug(f"Agent Step: {step}")
 
@@ -114,7 +114,11 @@ async def chat(req: ChatRequest):
 
                     # Check for update_user_profile tool calls -> collect as suggestions
                     if getattr(m, "tool_call_id", None) is not None:
-                        # This is a ToolMessage; check if it's a profile update
+                        # This is a ToolMessage — log its content
+                        tm_content = getattr(m, "content", None)
+                        tm_name = getattr(m, "name", None)
+                        logging.debug(f"  ToolMessage name={tm_name}, content (first 500 chars): {str(tm_content)[:500]}")
+                        # check if it's a profile update
                         try:
                             content = getattr(m, "content", None)
                             if content and "profile_update" in str(content):
