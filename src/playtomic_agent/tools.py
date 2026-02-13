@@ -27,11 +27,11 @@ def find_slots(
         "Optional: The timezone to use. Must be provided if start_time or end_time is set.",
     ] = None,
     duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
-) -> Annotated[list[Slot] | None, "The filtered slots."]:
+) -> Annotated[dict | None, "A summary of available slots with count and details."]:
     """Find available slots using PlaytomicClient."""
     try:
         with PlaytomicClient() as client:
-            return client.find_slots(  # type: ignore[no-any-return]
+            slots = client.find_slots(
                 club_slug=club_slug,
                 date=date,
                 court_type=court_type,
@@ -41,8 +41,27 @@ def find_slots(
                 duration=duration,
                 log_slots=True
             )
+            if not slots:
+                return {"count": 0, "slots": []}
+
+            # Return compact summaries instead of raw objects
+            return {
+                "count": len(slots),
+                "date": date,
+                "slots": [
+                    {
+                        "time": s.time.strftime("%H:%M"),
+                        "court": s.court_name,
+                        "duration": s.duration,
+                        "price": s.price,
+                        "club_id": s.club_id,
+                        "court_id": s.court_id,
+                        "booking_time": s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    }
+                    for s in slots
+                ],
+            }
     except Exception:
-        # Return None on error for backward compatibility
         return None
 
 

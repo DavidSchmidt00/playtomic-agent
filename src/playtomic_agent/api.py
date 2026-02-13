@@ -107,6 +107,11 @@ async def chat(req: ChatRequest):
                 logging.debug(f"Agent Step: {step}")
 
                 for m in data.get("messages", []):
+                    msg_type = type(m).__name__
+                    logging.debug(f"  Message type={msg_type}, role={getattr(m, 'role', None)}, "
+                                  f"tool_call_id={getattr(m, 'tool_call_id', None)}, "
+                                  f"has_tool_calls={bool(getattr(m, 'tool_calls', None))}")
+
                     # Check for update_user_profile tool calls -> collect as suggestions
                     if getattr(m, "tool_call_id", None) is not None:
                         # This is a ToolMessage; check if it's a profile update
@@ -130,7 +135,13 @@ async def chat(req: ChatRequest):
                     if role is not None and role != "assistant":
                         continue
 
+                    # Skip AIMessages that contain tool_calls (intermediate steps)
+                    if getattr(m, "tool_calls", None):
+                        logging.debug(f"  Skipping AIMessage with tool_calls: {[tc.get('name') for tc in m.tool_calls]}")
+                        continue
+
                     text = _extract_text(m)
+                    logging.debug(f"  Extracted text (len={len(text) if text else 0}): {text[:200] if text else None}")
                     if text:
                         final_text = text
 
