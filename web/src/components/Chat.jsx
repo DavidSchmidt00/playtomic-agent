@@ -149,7 +149,7 @@ export default function Chat({ region }) {
             disabled={loading}
           />
           <button type="submit" disabled={loading || !input.trim()}>
-            {loading ? '...' : 'Send'}
+            {loading ? '...' : t('send_btn')}
           </button>
         </form>
         {error && <div className="error">{error}</div>}

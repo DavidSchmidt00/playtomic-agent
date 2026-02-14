@@ -1,6 +1,7 @@
 {
     "welcome": "Welcome to Padel Agent",
     "placeholder": "e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'",
+    "send_btn": "Send",
     "empty_state": "🎾 Ask me to find or book a padel court!",
     "examplePrompts": {
         "0": "Find courts in Berlin",
