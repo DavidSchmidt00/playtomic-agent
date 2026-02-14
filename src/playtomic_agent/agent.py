@@ -46,8 +46,8 @@ def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
 
 # Initialize language model with rate limiter
 gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    # model="gemini-3-flash-preview",
+    # model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     google_api_key=settings.gemini_api_key,
     rate_limiter=create_rate_limiter(10),
 )
@@ -73,7 +73,10 @@ def _build_system_prompt(user_profile: dict | None = None) -> str:
         if prefs:
             profile_section = "\n\nUSER PREFERENCES (from previous sessions):\n" + "\n".join(prefs) + "\nUse these as defaults when the user doesn't specify. Do NOT ask for these values if they are already set."
 
-    return f"""You are a Padel court finder assistant. Today is {datetime.now().strftime("%Y-%m-%d")}. Timezone: {settings.default_timezone}.
+    lang_map = {"de": "German", "en": "English", "es": "Spanish", "fr": "French", "it": "Italian", "pt": "Portuguese", "nl": "Dutch"}
+    language = lang_map.get(settings.language, settings.language)
+
+    return f"""You are a Padel court finder assistant. Today is {datetime.now().strftime("%Y-%m-%d")}. Timezone: {settings.default_timezone}. Always respond in {language}.
 
 RULES:
 - Only answer questions about Padel courts and bookings. Refuse anything else.
