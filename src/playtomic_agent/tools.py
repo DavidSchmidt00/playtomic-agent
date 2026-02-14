@@ -99,7 +99,14 @@ def find_clubs_by_location(
     """Finds clubs near a specific location using geocoding."""
     try:
         from playtomic_agent.config import get_settings
-        country = get_settings().country
+        from playtomic_agent.context import get_country
+        
+        # Use per-request country or fall back to settings
+        try:
+            country = get_country()
+        except (ImportError, LookupError):
+            country = get_settings().country
+            
         with PlaytomicClient() as client:
             coordinates = client.geocode(query, country_code=country)
             if not coordinates:

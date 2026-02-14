@@ -5,7 +5,7 @@ import useProfile from '../hooks/useProfile'
 import ProfileCard from './ProfileCard'
 import ProfileSuggestion from './ProfileSuggestion'
 
-export default function Chat() {
+export default function Chat({ region }) {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -45,7 +45,7 @@ export default function Chat() {
     setError(null)
 
     try {
-      // Send full conversation history + user profile
+      // Send full conversation history + user profile + region settings
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.text }))
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -53,6 +53,9 @@ export default function Chat() {
         body: JSON.stringify({
           messages: history,
           user_profile: Object.keys(profile).length > 0 ? profile : null,
+          country: region?.country || null,
+          language: region?.language || 'en',
+          timezone: region?.timezone || null,
         }),
       })
 

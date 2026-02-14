@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from playtomic_agent.agent import create_playtomic_agent
+from playtomic_agent.context import set_request_region
 
 # Configure logging (use LOG_LEVEL env var, default to INFO)
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -32,7 +33,9 @@ class ChatRequest(BaseModel):
     prompt: str | None = None
     messages: list[dict] | None = None
     user_profile: dict | None = None
-    # optional settings for future use
+    # Region settings (from frontend region selector)
+    country: str | None = None
+    language: str | None = None
     timezone: str | None = None
 
 
@@ -93,8 +96,15 @@ async def chat(req: ChatRequest):
     else:
         raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
 
-    # Create agent with user profile context
-    agent = create_playtomic_agent(req.user_profile)
+    # Set per-request region context for tools
+    set_request_region(
+        country=req.country,
+        language=req.language,
+        timezone=req.timezone,
+    )
+
+    # Create agent with user profile context and region
+    agent = create_playtomic_agent(req.user_profile, language=req.language)
 
     # Track profile suggestions from tool calls
     profile_suggestions: list[ProfileSuggestion] = []
