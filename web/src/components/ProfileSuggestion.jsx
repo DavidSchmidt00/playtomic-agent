@@ -18,7 +18,7 @@ export default function ProfileSuggestion({ suggestions, onAccept, onDismiss }) 
                 💡 Save these preferences?
             </div>
             <div className="suggestion-items">
-                {suggestions.map((s, i) => (
+                {suggestions.filter(s => s.key !== 'preferred_club_slug').map((s, i) => (
                     <div key={i} className="suggestion-item">
                         <span className="suggestion-label">{LABELS[s.key] || s.key}:</span>
                         <span className="suggestion-value">{s.value}</span>
