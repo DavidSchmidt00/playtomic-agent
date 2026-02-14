@@ -27,21 +27,51 @@ def find_slots(
         "Optional: The timezone to use. Must be provided if start_time or end_time is set.",
     ] = None,
     duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
-) -> Annotated[list[Slot] | None, "The filtered slots."]:
+) -> Annotated[dict | None, "A summary of available slots with count and details."]:
     """Find available slots using PlaytomicClient."""
     try:
+        from playtomic_agent.config import get_settings
+        effective_tz = timezone or get_settings().default_timezone
         with PlaytomicClient() as client:
-            return client.find_slots(  # type: ignore[no-any-return]
+            slots = client.find_slots(
                 club_slug=club_slug,
                 date=date,
                 court_type=court_type,
                 start_time=start_time,
                 end_time=end_time,
-                timezone=timezone,
+                timezone=effective_tz,
                 duration=duration,
+                log_slots=True
             )
-    except Exception:
-        # Return None on error for backward compatibility
+            if not slots:
+                return {"count": 0, "slots": []}
+
+            # Return compact summaries with pre-computed local times and booking links
+            # Limit to 10 slots to keep LLM context manageable
+            from zoneinfo import ZoneInfo
+            from playtomic_agent.client.utils import create_booking_link as _make_link
+            tz = ZoneInfo(effective_tz)
+            return {
+                "count": len(slots),
+                "date": date,
+                "slots": [
+                    {
+                        "local_time": s.time.astimezone(tz).strftime("%H:%M"),
+                        "court": s.court_name,
+                        "duration": s.duration,
+                        "price": s.price,
+                        "booking_link": _make_link(
+                            s.club_id, s.court_id,
+                            s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                            s.duration,
+                        ),
+                    }
+                    for s in slots
+                ],
+            }
+    except Exception as exc:
+        import logging
+        logging.exception(f"find_slots failed: {exc}")
         return None
 
 
@@ -89,16 +119,25 @@ def find_clubs_by_location(
     except Exception:
         return None
 
-@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club').")
+@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club'). Use only the core club name, without location suffixes.")
 def find_clubs_by_name(
-    name: Annotated[str, "The club name to search for"],
+    name: Annotated[str, "The core club name to search for (e.g. 'Lemon Padel', not 'Lemon Padel Club Limburg')"],
 ) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
-    """Finds clubs matching a specific name."""
+    """Finds clubs matching a specific name. Retries with shorter queries if needed."""
     try:
         with PlaytomicClient() as client:
-            # Use tenant_name search
             clubs = client.search_clubs(name)
-            
+
+            # If no results, try progressively shorter queries
+            # e.g. "Lemon Padel Club Limburg" -> "Lemon Padel Club" -> "Lemon Padel"
+            if not clubs:
+                words = name.split()
+                for length in range(len(words) - 1, 1, -1):
+                    shorter = " ".join(words[:length])
+                    clubs = client.search_clubs(shorter)
+                    if clubs:
+                        break
+
             return [
                 {
                     "name": club.name,
@@ -110,3 +149,12 @@ def find_clubs_by_name(
             ]
     except Exception:
         return None
+
+@tool(description="Silently suggests saving a user preference. The UI will prompt the user to accept or decline. Call this whenever you detect a new preference from the user's request. Valid keys: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration', 'preferred_time'.")
+def update_user_profile(
+    key: Annotated[str, "The preference key (e.g. 'preferred_club_slug', 'preferred_city', 'court_type')"],
+    value: Annotated[str, "The preference value (e.g. 'lemon-padel-club', 'Berlin', 'DOUBLE')"],
+) -> Annotated[dict, "A profile update instruction for the frontend."]:
+    """Suggests a user preference update. The frontend will show a confirmation prompt."""
+    return {"profile_update": {"key": key, "value": value}}
+

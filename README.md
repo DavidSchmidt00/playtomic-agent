@@ -15,8 +15,8 @@ An AI-powered assistant and comprehensive toolkit for finding available Padel co
   - Filter by court type (SINGLE or DOUBLE)
   - Filter by time range with timezone support
   - Filter by slot duration (60, 90, 120 minutes)
+- **🧠 User Profile (Memory)**: Remembers your preferences (preferred club, court type, etc.) across sessions
 - **🛡️ Robust Error Handling**: Custom exceptions for better debugging
-- **✅ Fully Tested**: Comprehensive test suite with 65%+ coverage
 
 ## 📦 Installation
 
@@ -173,9 +173,26 @@ playtomic-agent slots \
 playtomic-agent slots --club-slug lemon-padel-club --json
 ```
 
-## � Web UI (Experimental) ✅
+## 🧠 User Profile (Memory)
 
-A minimal, extensible web frontend is included to interact with the LangGraph-based Playtomic agent. The frontend is a small React app (Vite) that talks to a FastAPI endpoint exposed by the Python service. It provides a centered chat UI with Markdown rendering and a loading indicator.
+The agent can remember your preferences across sessions using Browser Local Storage.
+
+**Supported preferences:**
+- **Preferred Club**: Your go-to padel club
+- **City**: Your default location for club searches
+- **Court Type**: SINGLE or DOUBLE
+- **Duration**: Preferred slot duration (e.g., 90 minutes)
+- **Preferred Time**: Your usual play time (e.g., "evenings")
+
+**How it works:**
+1. When you search, the agent may suggest saving your preferences.
+2. A confirmation prompt appears in the chat — click "Save" or "No thanks".
+3. Saved preferences appear as pills above the chat box and are used automatically in future searches.
+4. You can remove individual preferences or clear all at any time.
+
+## 🌐 Web UI (Experimental) ✅
+
+A minimal, extensible web frontend is included to interact with the LangGraph-based Playtomic agent. The frontend is a small React app (Vite) that talks to a FastAPI endpoint exposed by the Python service. It provides a centered chat UI with Markdown rendering, a loading indicator, and a user profile card.
 
 Quick start (Dev Container):
 

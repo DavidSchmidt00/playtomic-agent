@@ -108,10 +108,19 @@ body {
    App Layout
    ═══════════════════════════════════════════════════════ */
 .app-root {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
+}
+
+.app-root>main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 /* ─── Header ─── */
@@ -189,15 +198,186 @@ body {
   max-width: 820px;
   padding: 1rem 1.5rem 2rem;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   flex: 1;
+  min-height: 0;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+/* ─── Profile Card ─── */
+.profile-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-bubble);
+  animation: fadeSlideIn 0.3s ease-out;
+  transition: background var(--transition-speed), border-color var(--transition-speed);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.profile-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-clear {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.profile-clear:hover {
+  color: var(--error-color);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.profile-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 20px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  transition: all 0.2s;
+}
+
+.profile-label {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.profile-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.profile-remove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.profile-remove:hover {
+  color: var(--error-color);
+}
+
+/* ─── Profile Suggestion (Confirmation UI) ─── */
+.profile-suggestion {
+  margin: 0.6rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: var(--radius-md);
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+.suggestion-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.suggestion-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.suggestion-item {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.suggestion-label {
+  color: var(--text-secondary);
+  margin-right: 0.3rem;
+}
+
+.suggestion-value {
+  font-weight: 500;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.suggestion-accept,
+.suggestion-dismiss {
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.suggestion-accept {
+  background: var(--gradient-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 2px 6px rgba(6, 182, 212, 0.25);
+}
+
+.suggestion-accept:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.35);
+}
+
+.suggestion-dismiss {
+  background: var(--bg-surface-raised);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.suggestion-dismiss:hover {
+  color: var(--text-primary);
+  border-color: var(--border-input);
 }
 
 .chat-box {
   width: 100%;
   max-width: 640px;
-  height: 600px;
-  flex: 0 0 600px;
+  flex: 1;
+  min-height: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -473,8 +653,6 @@ body {
   .chat-box {
     padding: 0.75rem;
     border-radius: var(--radius-md);
-    height: 78vh;
-    max-height: none;
   }
 
   .bubble {
