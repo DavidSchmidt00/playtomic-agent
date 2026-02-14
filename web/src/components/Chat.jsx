@@ -198,6 +198,13 @@ export default function Chat({ region }) {
             </div>
           )}
 
+          {messages.length === 0 && (
+            <div className="empty">
+              <span className="empty-icon">🎾</span>
+              <p>{t('empty_state')}</p>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
