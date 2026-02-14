@@ -4,8 +4,8 @@
     "send_btn": "Senden",
     "empty_state": "🎾 Frag mich nach Plätzen oder Buchungen!",
     "examplePrompts": {
-        "0": "Suche Plätze in Berlin",
-        "1": "Nächster Termin bei Lemon Padel"
+        "0": "Suche nach Padel-Plätzen in der Nähe von Frankfurt",
+        "1": "Suche nach freien Doppelplätzen zwischen 17:00 und 20:00 Uhr"
     },
     "profileLabels": {
         "club": "🏟️ Club",

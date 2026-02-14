@@ -140,6 +140,16 @@ export default function Chat({ region }) {
           <div ref={messagesEndRef} />
         </div>
 
+        {messages.length === 0 && (
+          <div className="suggestions-row">
+            {Object.values(t('examplePrompts', { returnObjects: true })).map((prompt, i) => (
+              <button key={i} className="suggestion-chip" onClick={() => setInput(prompt)}>
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
         <form className="input-row" onSubmit={sendPrompt}>
           <input
             aria-label="Prompt"
