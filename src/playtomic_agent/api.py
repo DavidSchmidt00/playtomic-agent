@@ -81,14 +81,21 @@ def _extract_text(m) -> str | None:
     return None
 
 
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    """Accept a prompt, run the agent, and return the final assistant message.
+from fastapi.responses import StreamingResponse
+import json
 
-    Optionally accepts a user_profile dict that is injected into the agent's
-    system prompt for personalized responses.
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    """Accept a prompt, run the agent, and stream events via SSE.
+    
+    Events:
+    - tool_start: {"tool": "name", "input": "..."}
+    - tool_end: {"tool": "name", "output": "..."}
+    - message: {"text": "final response"}
+    - profile_suggestion: {"key": "...", "value": "..."}
+    - error: {"detail": "..."}
     """
-    # Prepare input for the agent – use full history when available
+    # Prepare input
     if req.messages:
         messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
     elif req.prompt:
@@ -96,77 +103,82 @@ async def chat(req: ChatRequest):
     else:
         raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
 
-    # Set per-request region context for tools
+    # Set context
     set_request_region(
         country=req.country,
         language=req.language,
         timezone=req.timezone,
     )
 
-    # Create agent with user profile context and region
     agent = create_playtomic_agent(req.user_profile, language=req.language)
 
-    # Track profile suggestions from tool calls
-    profile_suggestions: list[ProfileSuggestion] = []
-    final_text = None
+    async def stream_agent_events():
+        try:
+            logging.debug(f"Starting agent stream with profile: {req.user_profile}")
+            
+            # Use "updates" mode to get each step of the graph
+            for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 15}):
+                for step, data in chunk.items():
+                    logging.debug(f"Agent Step: {step}")
+                    
+                    for m in data.get("messages", []):
+                        # 1. Check for Tool Calls (Tool Start)
+                        if getattr(m, "tool_calls", None):
+                            for tc in m.tool_calls:
+                                event = {
+                                    "type": "tool_start",
+                                    "tool": tc.get("name"),
+                                    "input": str(tc.get("args")),
+                                }
+                                yield f"data: {json.dumps(event)}\n\n"
+                                logging.debug(f"Stream yielded tool_start: {tc.get('name')}")
 
-    try:
-        logging.debug(f"Starting agent with profile: {req.user_profile}")
-        for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 15}):
-            for step, data in chunk.items():
-                logging.debug(f"Agent Step: {step}")
+                        # 2. Check for Tool Output (Tool End) & Profile Updates
+                        if getattr(m, "tool_call_id", None) is not None:
+                            tool_name = getattr(m, "name", "unknown")
+                            content = getattr(m, "content", "")
+                            
+                            # Check for profile update
+                            if tool_name == "update_user_profile":
+                                try:
+                                    # Content might be stringified JSON
+                                    parsed = json.loads(content) if isinstance(content, str) else content
+                                    if isinstance(parsed, dict) and "profile_update" in parsed:
+                                        update = parsed["profile_update"]
+                                        event = {
+                                            "type": "profile_suggestion",
+                                            "key": update["key"],
+                                            "value": update["value"]
+                                        }
+                                        yield f"data: {json.dumps(event)}\n\n"
+                                        logging.info(f"Stream yielded profile_suggestion: {update}")
+                                except Exception:
+                                    pass
 
-                for m in data.get("messages", []):
-                    msg_type = type(m).__name__
-                    logging.debug(f"  Message type={msg_type}, role={getattr(m, 'role', None)}, "
-                                  f"tool_call_id={getattr(m, 'tool_call_id', None)}, "
-                                  f"has_tool_calls={bool(getattr(m, 'tool_calls', None))}")
+                            # Emit generic tool end
+                            event = {
+                                "type": "tool_end",
+                                "tool": tool_name,
+                                "output": str(content)[:200]  # truncate for log/stream
+                            }
+                            yield f"data: {json.dumps(event)}\n\n"
+                            logging.debug(f"Stream yielded tool_end: {tool_name}")
 
-                    # Check for update_user_profile tool calls -> collect as suggestions
-                    if getattr(m, "tool_call_id", None) is not None:
-                        # This is a ToolMessage — log its content
-                        tm_content = getattr(m, "content", None)
-                        tm_name = getattr(m, "name", None)
-                        logging.debug(f"  ToolMessage name={tm_name}, content (first 500 chars): {str(tm_content)[:500]}")
-                        # check if it's a profile update
-                        try:
-                            content = getattr(m, "content", None)
-                            if content and "profile_update" in str(content):
-                                import json
-                                parsed = json.loads(content) if isinstance(content, str) else content
-                                if isinstance(parsed, dict) and "profile_update" in parsed:
-                                    update = parsed["profile_update"]
-                                    profile_suggestions.append(
-                                        ProfileSuggestion(key=update["key"], value=update["value"])
-                                    )
-                                    logging.info(f"Profile suggestion: {update['key']}={update['value']}")
-                        except Exception:
-                            pass
-                        continue
+                        # 3. Check for Final Answer (Text)
+                        # We only want the *final* assistant message, not intermediate tool calls
+                        role = getattr(m, "role", None)
+                        if role == "assistant" and not getattr(m, "tool_calls", None):
+                            text = _extract_text(m)
+                            if text:
+                                event = {
+                                    "type": "message",
+                                    "text": text
+                                }
+                                yield f"data: {json.dumps(event)}\n\n"
+                                logging.debug("Stream yielded final message")
 
-                    # Skip non-assistant messages
-                    role = getattr(m, "role", None)
-                    if role is not None and role != "assistant":
-                        continue
+        except Exception as exc:
+            logging.exception("Agent stream failed")
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
 
-                    # Skip AIMessages that contain tool_calls (intermediate steps)
-                    if getattr(m, "tool_calls", None):
-                        logging.debug(f"  Skipping AIMessage with tool_calls: {[tc.get('name') for tc in m.tool_calls]}")
-                        continue
-
-                    text = _extract_text(m)
-                    logging.debug(f"  Extracted text (len={len(text) if text else 0}): {text[:200] if text else None}")
-                    if text:
-                        final_text = text
-
-    except Exception as exc:
-        logging.exception("Agent execution failed")
-        raise HTTPException(status_code=500, detail=f"Agent execution error: {exc}") from exc
-
-    if not final_text:
-        raise HTTPException(status_code=500, detail="Agent did not return an assistant response.")
-
-    return ChatResponse(
-        text=final_text,
-        profile_suggestions=profile_suggestions if profile_suggestions else None,
-    )
+    return StreamingResponse(stream_agent_events(), media_type="text/event-stream")
