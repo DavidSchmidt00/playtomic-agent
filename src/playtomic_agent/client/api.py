@@ -138,11 +138,12 @@ class PlaytomicClient:
         except (KeyError, TypeError) as e:
             raise APIError(f"Failed to parse club data: {e}") from e
 
-    def geocode(self, query: str) -> tuple[float, float] | None:
+    def geocode(self, query: str, country_code: str | None = None) -> tuple[float, float] | None:
         """Geocode a query string to coordinates using OpenStreetMap Nominatim.
 
         Args:
             query: The address or place to search for.
+            country_code: Optional ISO 3166-1 alpha-2 code to bias results (e.g. 'DE').
 
         Returns:
             tuple[float, float] | None: The (latitude, longitude) or None if not found.
@@ -150,9 +151,12 @@ class PlaytomicClient:
         try:
             # Respect Nominatim policy with User-Agent
             headers = {"User-Agent": "PlaytomicAgent/1.0 (Educational Project)"}
+            params = {"q": query, "format": "json", "limit": 1}
+            if country_code:
+                params["countrycodes"] = country_code.lower()
             response = requests.get(
                 "https://nominatim.openstreetmap.org/search",
-                params={"q": query, "format": "json", "limit": 1},
+                params=params,
                 headers=headers,
                 timeout=5,
             )

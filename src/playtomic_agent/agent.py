@@ -46,16 +46,16 @@ def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
 
 # Initialize language model with rate limiter
 gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    # model="gemini-3-flash-preview",
+    # model="gemini-2.5-flash",
+    model="gemini-3-flash-preview",
     google_api_key=settings.gemini_api_key,
     rate_limiter=create_rate_limiter(10),
 )
 llm = gemini
 
 
-def _build_system_prompt(user_profile: dict | None = None) -> str:
-    """Build the system prompt, optionally injecting user profile context."""
+def _build_system_prompt(user_profile: dict | None = None, language: str | None = None) -> str:
+    """Build the system prompt with optional user profile context and language."""
     profile_section = ""
     if user_profile:
         prefs = []
@@ -73,7 +73,19 @@ def _build_system_prompt(user_profile: dict | None = None) -> str:
         if prefs:
             profile_section = "\n\nUSER PREFERENCES (from previous sessions):\n" + "\n".join(prefs) + "\nUse these as defaults when the user doesn't specify. Do NOT ask for these values if they are already set."
 
-    return f"""You are a Padel court finder assistant. Today is {datetime.now().strftime("%Y-%m-%d")}. Timezone: {settings.default_timezone}.
+    lang_map = {"de": "German", "en": "English", "es": "Spanish", "fr": "French", "it": "Italian", "pt": "Portuguese", "nl": "Dutch"}
+    
+    # Use provided language or fall back to context/settings
+    if not language:
+        try:
+            from playtomic_agent.context import get_language
+            language = get_language()
+        except ImportError:
+            language = "en"
+
+    lang_name = lang_map.get(language, language)
+
+    return f"""You are a Padel court finder assistant. Today is {datetime.now().strftime("%Y-%m-%d")}. Timezone: {settings.default_timezone}. Always respond in {lang_name}.
 
 RULES:
 - Only answer questions about Padel courts and bookings. Refuse anything else.
@@ -99,13 +111,15 @@ RESPONSE FORMAT:
 - Do NOT suggest other clubs or add unsolicited information.{profile_section}"""
 
 
-def create_playtomic_agent(user_profile: dict | None = None) -> CompiledStateGraph:
+def create_playtomic_agent(
+    user_profile: dict | None = None, language: str | None = None
+) -> CompiledStateGraph:
     """Create the playtomic agent with an optional user profile injected into the system prompt."""
     return create_agent(
         model=llm,
         name="playtomic_agent",
         tools=TOOLS,
-        system_prompt=_build_system_prompt(user_profile),
+        system_prompt=_build_system_prompt(user_profile, language=language),
     )
 
 

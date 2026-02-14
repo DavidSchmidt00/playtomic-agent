@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import useProfile from '../hooks/useProfile'
 import ProfileCard from './ProfileCard'
 import ProfileSuggestion from './ProfileSuggestion'
 
-export default function Chat() {
+export default function Chat({ region }) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -45,7 +47,7 @@ export default function Chat() {
     setError(null)
 
     try {
-      // Send full conversation history + user profile
+      // Send full conversation history + user profile + region settings
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.text }))
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -53,6 +55,9 @@ export default function Chat() {
         body: JSON.stringify({
           messages: history,
           user_profile: Object.keys(profile).length > 0 ? profile : null,
+          country: region?.country || null,
+          language: region?.language || 'en',
+          timezone: region?.timezone || null,
         }),
       })
 
@@ -90,7 +95,7 @@ export default function Chat() {
           {messages.length === 0 && (
             <div className="empty">
               <span className="empty-icon">🎾</span>
-              Ask me to find or book a padel court!
+              {t('empty_state')}
             </div>
           )}
 
@@ -118,6 +123,7 @@ export default function Chat() {
               suggestions={pendingSuggestions}
               onAccept={handleAcceptSuggestions}
               onDismiss={handleDismissSuggestions}
+              PROFILE_LABELS={PROFILE_LABELS}
             />
           )}
 
@@ -137,13 +143,13 @@ export default function Chat() {
         <form className="input-row" onSubmit={sendPrompt}>
           <input
             aria-label="Prompt"
-            placeholder="e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'"
+            placeholder={t('placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={loading}
           />
           <button type="submit" disabled={loading || !input.trim()}>
-            {loading ? '...' : 'Send'}
+            {loading ? '...' : t('send_btn')}
           </button>
         </form>
         {error && <div className="error">{error}</div>}

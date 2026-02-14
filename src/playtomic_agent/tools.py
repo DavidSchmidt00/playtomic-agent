@@ -98,8 +98,16 @@ def find_clubs_by_location(
 ) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
     """Finds clubs near a specific location using geocoding."""
     try:
+        from playtomic_agent.context import get_country
+        
+        # Use per-request country
+        try:
+            country = get_country()
+        except (ImportError, LookupError):
+            country = None
+            
         with PlaytomicClient() as client:
-            coordinates = client.geocode(query)
+            coordinates = client.geocode(query, country_code=country)
             if not coordinates:
                 return None
             

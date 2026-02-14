@@ -133,6 +133,12 @@ body {
   justify-content: space-between;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .app-header h1 {
   font-size: 1.35rem;
   font-weight: 700;
@@ -188,6 +194,64 @@ body {
 
 [data-theme='light'] .theme-toggle-thumb {
   transform: translateX(24px);
+}
+
+/* ─── Region Selector ─── */
+.region-selector {
+  position: relative;
+}
+
+.region-toggle {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-input);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  line-height: 1;
+}
+
+.region-toggle:hover {
+  border-color: var(--accent);
+}
+
+.region-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 140px;
+  animation: fadeSlideIn 0.15s ease-out;
+}
+
+.region-option {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.region-option:hover {
+  background: var(--accent-subtle);
+}
+
+.region-option.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════════════════
