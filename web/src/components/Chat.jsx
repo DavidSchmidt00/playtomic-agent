@@ -184,7 +184,7 @@ export default function Chat({ region }) {
 
           {loading && (
             <div className="message assistant">
-              <div className="bubble typing-indicator">
+              <div className={`bubble ${toolStatus ? 'tool-execution' : 'typing-indicator'}`}>
                 {toolStatus ? (
                   <span className="tool-status">⚙️ {toolStatus}</span>
                 ) : (

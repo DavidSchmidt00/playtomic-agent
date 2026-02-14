@@ -695,6 +695,37 @@ body {
   }
 }
 
+/* ─── Tool Execution Status ─── */
+.tool-execution {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  min-height: 44px;
+  /* Match typing indicator height approx */
+}
+
+.tool-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
 /* ─── Error ─── */
 .error {
   color: var(--error-color);
