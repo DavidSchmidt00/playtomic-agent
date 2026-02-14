@@ -99,7 +99,8 @@ export default function Chat({ region }) {
               if (data.type === 'tool_start') {
                 setToolStatus(`Executing ${data.tool}...`)
               } else if (data.type === 'tool_end') {
-                setToolStatus(null)
+                // Delay clearing status to ensure it's visible and prevent flickering
+                setTimeout(() => setToolStatus(null), 1000)
               } else if (data.type === 'message') {
                 assistantMsg.text = data.text
                 setMessages((prev) => {
