@@ -157,16 +157,16 @@ export default function Chat({ region }) {
         onClear={clearProfile}
       />
 
-      {pendingSuggestions.length > 0 && (
-        <ProfileSuggestion
-          suggestions={pendingSuggestions}
-          onAccept={acceptSuggestions}
-          onDismiss={dismissSuggestions}
-          PROFILE_LABELS={PROFILE_LABELS}
-        />
-      )}
-
       <div className="chat-box">
+        {pendingSuggestions.length > 0 && (
+          <ProfileSuggestion
+            suggestions={pendingSuggestions}
+            onAccept={acceptSuggestions}
+            onDismiss={dismissSuggestions}
+            PROFILE_LABELS={PROFILE_LABELS}
+          />
+        )}
+
         <div className="messages">
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`}>
