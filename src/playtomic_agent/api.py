@@ -128,7 +128,7 @@ async def chat(req: ChatRequest):
                                 event = {
                                     "type": "tool_start",
                                     "tool": tc.get("name"),
-                                    "input": str(tc.get("args")),
+                                    # "input" turned out to cause JSON parsing issues on frontend if it contains quotes
                                 }
                                 yield f"data: {json.dumps(event)}\n\n"
                                 logging.debug(f"Stream yielded tool_start: {tc.get('name')}")

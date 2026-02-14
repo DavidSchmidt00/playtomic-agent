@@ -96,11 +96,13 @@ export default function Chat({ region }) {
             try {
               const data = JSON.parse(line.slice(6))
 
+              console.log('SSE Event:', data)
+
               if (data.type === 'tool_start') {
-                setToolStatus(`Executing ${data.tool}...`)
+                setToolStatus(`Executing ${data.tool || 'tool'}...`)
               } else if (data.type === 'tool_end') {
                 // Delay clearing status to ensure it's visible and prevent flickering
-                setTimeout(() => setToolStatus(null), 1000)
+                setTimeout(() => setToolStatus(null), 2000)
               } else if (data.type === 'message') {
                 assistantMsg.text = data.text
                 setMessages((prev) => {
