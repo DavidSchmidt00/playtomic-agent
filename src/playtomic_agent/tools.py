@@ -46,24 +46,27 @@ def find_slots(
             if not slots:
                 return {"count": 0, "slots": []}
 
-            # Return compact summaries instead of raw objects
+            # Return compact summaries with pre-computed local times and booking links
             # Limit to 10 slots to keep LLM context manageable
-            display_slots = slots[:10]
+            from zoneinfo import ZoneInfo
+            from playtomic_agent.client.utils import create_booking_link as _make_link
+            tz = ZoneInfo(effective_tz)
             return {
                 "count": len(slots),
-                "showing": len(display_slots),
                 "date": date,
                 "slots": [
                     {
-                        "time": s.time.strftime("%H:%M"),
+                        "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                         "court": s.court_name,
                         "duration": s.duration,
                         "price": s.price,
-                        "club_id": s.club_id,
-                        "court_id": s.court_id,
-                        "booking_time": s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                        "booking_link": _make_link(
+                            s.club_id, s.court_id,
+                            s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                            s.duration,
+                        ),
                     }
-                    for s in display_slots
+                    for s in slots
                 ],
             }
     except Exception as exc:
