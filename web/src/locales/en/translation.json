@@ -1,0 +1,28 @@
+{
+    "welcome": "Welcome to Padel Agent",
+    "placeholder": "e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'",
+    "empty_state": "🎾 Ask me to find or book a padel court!",
+    "examplePrompts": {
+        "0": "Find courts in Berlin",
+        "1": "Next slot at Lemon Padel"
+    },
+    "profileLabels": {
+        "club": "🏟️ Club",
+        "slug": "🔗 Club Slug",
+        "city": "📍 City",
+        "court": "🎾 Court Type",
+        "duration": "⏱️ Duration",
+        "time": "🕐 Preferred Time"
+    },
+    "profile": {
+        "memory": "🧠 Memory",
+        "clear": "Clear all preferences",
+        "remove": "Remove {{label}}",
+        "save_prompt": "💡 Save these preferences?",
+        "save_btn": "✅ Save",
+        "dismiss_btn": "❌ No thanks"
+    },
+    "region": {
+        "label": "Region"
+    }
+}

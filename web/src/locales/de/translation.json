@@ -1,0 +1,28 @@
+{
+    "welcome": "Willkommen beim Padel Agent",
+    "placeholder": "z.B. 'Finde einen 90-Minuten-Platz im Lemon Padel Club morgen 18:00–20:00'",
+    "empty_state": "🎾 Frag mich nach Plätzen oder Buchungen!",
+    "examplePrompts": {
+        "0": "Suche Plätze in Berlin",
+        "1": "Nächster Termin bei Lemon Padel"
+    },
+    "profileLabels": {
+        "club": "🏟️ Club",
+        "slug": "🔗 Club Slug",
+        "city": "📍 Stadt",
+        "court": "🎾 Platzart",
+        "duration": "⏱️ Dauer",
+        "time": "🕐 Zeit"
+    },
+    "profile": {
+        "memory": "🧠 Merkzettel",
+        "clear": "Alle Einstellungen löschen",
+        "remove": "{{label}} entfernen",
+        "save_prompt": "💡 Einstellungen speichern?",
+        "save_btn": "✅ Speichern",
+        "dismiss_btn": "❌ Nein danke"
+    },
+    "region": {
+        "label": "Region"
+    }
+}

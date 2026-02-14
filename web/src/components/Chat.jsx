@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import useProfile from '../hooks/useProfile'
@@ -6,6 +7,7 @@ import ProfileCard from './ProfileCard'
 import ProfileSuggestion from './ProfileSuggestion'
 
 export default function Chat({ region }) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -93,7 +95,7 @@ export default function Chat({ region }) {
           {messages.length === 0 && (
             <div className="empty">
               <span className="empty-icon">🎾</span>
-              Ask me to find or book a padel court!
+              {t('empty_state')}
             </div>
           )}
 
@@ -121,6 +123,7 @@ export default function Chat({ region }) {
               suggestions={pendingSuggestions}
               onAccept={handleAcceptSuggestions}
               onDismiss={handleDismissSuggestions}
+              PROFILE_LABELS={PROFILE_LABELS}
             />
           )}
 
@@ -140,7 +143,7 @@ export default function Chat({ region }) {
         <form className="input-row" onSubmit={sendPrompt}>
           <input
             aria-label="Prompt"
-            placeholder="e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'"
+            placeholder={t('placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={loading}

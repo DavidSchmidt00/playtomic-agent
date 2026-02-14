@@ -3,12 +3,12 @@ import { useState, useEffect, useCallback } from 'react'
 const STORAGE_KEY = 'padel_profile'
 
 const PROFILE_LABELS = {
-    preferred_club_name: '🏟️ Club',
-    preferred_club_slug: '🔗 Club Slug',
-    preferred_city: '📍 City',
-    court_type: '🎾 Court Type',
-    duration: '⏱️ Duration',
-    preferred_time: '🕐 Preferred Time',
+    preferred_club_name: 'profileLabels.club',
+    preferred_club_slug: 'profileLabels.slug',
+    preferred_city: 'profileLabels.city',
+    court_type: 'profileLabels.court',
+    duration: 'profileLabels.duration',
+    preferred_time: 'profileLabels.time',
 }
 
 export default function useProfile() {
