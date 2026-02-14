@@ -26,16 +26,7 @@ class Settings(BaseSettings):
         alias="DEFAULT_TIMEZONE",
         description="Default timezone for the application",
     )
-    country: str = Field(
-        default="DE",
-        alias="COUNTRY",
-        description="ISO 3166-1 alpha-2 country code (e.g. DE, AT, CH, ES) for location search bias",
-    )
-    language: str = Field(
-        default="de",
-        alias="LANGUAGE",
-        description="Language for agent responses (e.g. de, en, es)",
-    )
+
 
     # API Configuration
     playtomic_api_base_url: str = Field(

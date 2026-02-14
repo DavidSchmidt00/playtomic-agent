@@ -81,7 +81,7 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
             from playtomic_agent.context import get_language
             language = get_language()
         except ImportError:
-            language = settings.language
+            language = "en"
 
     lang_name = lang_map.get(language, language)
 

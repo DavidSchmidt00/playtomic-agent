@@ -22,8 +22,8 @@ def set_request_region(
 ) -> None:
     """Set region context for the current request."""
     settings = get_settings()
-    _country_var.set(country if country is not None else settings.country)
-    _language_var.set(language or settings.language)
+    _country_var.set(country)
+    _language_var.set(language or "en")
     _timezone_var.set(timezone or settings.default_timezone)
 
 
