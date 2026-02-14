@@ -166,64 +166,66 @@ export default function Chat({ region }) {
         />
       )}
 
-      <div className="messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
-            <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
-              {msg.role === 'assistant' ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.text}
-                </ReactMarkdown>
-              ) : (
-                msg.text
-              )}
+      <div className="chat-box">
+        <div className="messages">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.role}`}>
+              <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
+                {msg.role === 'assistant' ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                ) : (
+                  msg.text
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {loading && (
-          <div className="message assistant">
-            <div className="bubble typing-indicator">
-              {toolStatus ? (
-                <span className="tool-status">⚙️ {toolStatus}</span>
-              ) : (
-                <>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </>
-              )}
+          {loading && (
+            <div className="message assistant">
+              <div className="bubble typing-indicator">
+                {toolStatus ? (
+                  <span className="tool-status">⚙️ {toolStatus}</span>
+                ) : (
+                  <>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </>
+                )}
+              </div>
             </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {messages.length === 0 && (
+          <div className="suggestions-row">
+            {Object.values(t('examplePrompts', { returnObjects: true }) || {}).map((prompt, i) => (
+              <button key={i} className="suggestion-chip" onClick={() => handleSuggestionClick(prompt)}>
+                {prompt}
+              </button>
+            ))}
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        <form className="input-row" onSubmit={sendPrompt}>
+          <input
+            aria-label="Prompt"
+            placeholder={t('placeholder')}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={loading}
+          />
+          <button type="submit" disabled={loading || !input.trim()}>
+            {loading ? '...' : t('send_btn')}
+          </button>
+        </form>
+
+        {error && <div className="error">{error}</div>}
       </div>
-
-      {messages.length === 0 && (
-        <div className="suggestions-row">
-          {Object.values(t('examplePrompts', { returnObjects: true }) || {}).map((prompt, i) => (
-            <button key={i} className="suggestion-chip" onClick={() => handleSuggestionClick(prompt)}>
-              {prompt}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <form className="input-row" onSubmit={sendPrompt}>
-        <input
-          aria-label="Prompt"
-          placeholder={t('placeholder')}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={loading}
-        />
-        <button type="submit" disabled={loading || !input.trim()}>
-          {loading ? '...' : t('send_btn')}
-        </button>
-      </form>
-
-      {error && <div className="error">{error}</div>}
     </div>
   )
 }

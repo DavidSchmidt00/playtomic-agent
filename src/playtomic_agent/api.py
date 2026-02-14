@@ -166,8 +166,8 @@ async def chat(req: ChatRequest):
 
                         # 3. Check for Final Answer (Text)
                         # We only want the *final* assistant message, not intermediate tool calls
-                        role = getattr(m, "role", None)
-                        if role == "assistant" and not getattr(m, "tool_calls", None):
+                        is_ai = m.__class__.__name__ == "AIMessage" or getattr(m, "type", "") == "ai"
+                        if is_ai and not getattr(m, "tool_calls", None):
                             text = _extract_text(m)
                             if text:
                                 event = {
