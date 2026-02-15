@@ -6,6 +6,7 @@
         "PARSING_ERROR": "Ich konnte die Serverantwort nicht verstehen. Bitte versuche es erneut.",
         "INTERNAL_SERVER_ERROR": "Etwas ist schiefgelaufen. Bitte versuche es später noch einmal."
     },
+    "error_prefix": "Fehler",
     "welcome": "Willkommen beim Padel Agent",
     "placeholder": "Nachricht an Padel Agent...",
     "send_btn": "Senden",

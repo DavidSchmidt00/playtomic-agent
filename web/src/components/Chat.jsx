@@ -96,40 +96,42 @@ export default function Chat({ region }) {
         for (const line of lines) {
           if (line.trim() === '') continue
           if (line.startsWith('data: ')) {
+            let data
             try {
-              const data = JSON.parse(line.slice(6))
-
-              if (data.type === 'tool_start') {
-                const toolName = data.tool || 'default'
-                // Try to find a translation, fallback to raw name if missing
-                const translatedStatus = t(`tool_names.${toolName}`, { defaultValue: `Executing ${toolName}...` })
-                setToolStatus(translatedStatus)
-              } else if (data.type === 'tool_end') {
-                // Delay clearing status to ensure it's visible and prevent flickering
-                setTimeout(() => setToolStatus(null), 2000)
-              } else if (data.type === 'message') {
-                assistantMsg.text = data.text
-                setMessages((prev) => {
-                  const newMsgs = [...prev]
-                  newMsgs[newMsgs.length - 1] = { ...assistantMsg }
-                  return newMsgs
-                })
-              } else if (data.type === 'profile_suggestion') {
-                setPendingSuggestions((prev) => {
-                  const exists = prev?.find(s => s.key === data.key && s.value === data.value)
-                  if (exists) return prev
-                  return [...(prev || []), { key: data.key, value: data.value }]
-                })
-              } else if (data.type === 'error') {
-                // Try to find a translation for the error code
-                // Fallback to the detail/message provided by backend if no translation found
-                const errorKey = data.code ? `errors.${data.code}` : null
-                const errorMessage = errorKey ? t(errorKey, { defaultValue: data.message || data.detail }) : (data.message || data.detail)
-
-                throw new Error(errorMessage)
-              }
+              data = JSON.parse(line.slice(6))
             } catch (e) {
               console.warn('Failed to parse SSE data:', line)
+              continue
+            }
+
+            if (data.type === 'tool_start') {
+              const toolName = data.tool || 'default'
+              // Try to find a translation, fallback to raw name if missing
+              const translatedStatus = t(`tool_names.${toolName}`, { defaultValue: `Executing ${toolName}...` })
+              setToolStatus(translatedStatus)
+            } else if (data.type === 'tool_end') {
+              // Delay clearing status to ensure it's visible and prevent flickering
+              setTimeout(() => setToolStatus(null), 2000)
+            } else if (data.type === 'message') {
+              assistantMsg.text = data.text
+              setMessages((prev) => {
+                const newMsgs = [...prev]
+                newMsgs[newMsgs.length - 1] = { ...assistantMsg }
+                return newMsgs
+              })
+            } else if (data.type === 'profile_suggestion') {
+              setPendingSuggestions((prev) => {
+                const exists = prev?.find(s => s.key === data.key && s.value === data.value)
+                if (exists) return prev
+                return [...(prev || []), { key: data.key, value: data.value }]
+              })
+            } else if (data.type === 'error') {
+              // Try to find a translation for the error code
+              // Fallback to the detail/message provided by backend if no translation found
+              const errorKey = data.code ? `errors.${data.code}` : null
+              const errorMessage = errorKey ? t(errorKey, { defaultValue: data.message || data.detail }) : (data.message || data.detail)
+
+              throw new Error(errorMessage)
             }
           }
         }
@@ -143,10 +145,10 @@ export default function Chat({ region }) {
         const last = m[m.length - 1]
         if (last.role === 'assistant' && !last.text) {
           const newMsgs = [...m]
-          newMsgs[newMsgs.length - 1] = { role: 'assistant', text: '**Error:** ' + err.message }
+          newMsgs[newMsgs.length - 1] = { role: 'assistant', text: `**${t('error_prefix')}:** ` + err.message }
           return newMsgs
         }
-        return [...m, { role: 'assistant', text: '**Error:** ' + err.message }]
+        return [...m, { role: 'assistant', text: `**${t('error_prefix')}:** ` + err.message }]
       })
     } finally {
       setLoading(false)
