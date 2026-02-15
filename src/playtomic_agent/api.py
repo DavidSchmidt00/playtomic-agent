@@ -116,7 +116,7 @@ async def chat(req: ChatRequest):
             logging.debug(f"Starting agent stream with profile: {req.user_profile}")
             
             # Use "updates" mode to get each step of the graph
-            for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 15}):
+            for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}):
                 for step, data in chunk.items():
                     logging.debug(f"Agent Step: {step}")
                     
@@ -181,7 +181,12 @@ async def chat(req: ChatRequest):
                                 logging.debug("Stream yielded final message")
 
         except Exception as exc:
-            logging.exception("Agent stream failed")
-            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
+            # Check for recursion error string since we might not have the class imported or it wraps
+            if "recursion limit" in str(exc).lower():
+                logging.error("Agent hit recursion limit")
+                yield f"data: {json.dumps({'type': 'error', 'detail': 'I thought about this for too long and got stuck. Please try rephrasing your request.'})}\n\n"
+            else:
+                logging.exception("Agent stream failed")
+                yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
 
     return StreamingResponse(stream_agent_events(), media_type="text/event-stream")
