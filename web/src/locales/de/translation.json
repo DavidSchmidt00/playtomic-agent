@@ -1,11 +1,20 @@
 {
     "welcome": "Willkommen beim Padel Agent",
-    "placeholder": "z.B. 'Finde einen 90-Minuten-Platz im Lemon Padel Club morgen 18:00–20:00'",
+    "placeholder": "Nachricht an Padel Agent...",
     "send_btn": "Senden",
-    "empty_state": "🎾 Frag mich nach Plätzen oder Buchungen!",
+    "empty_state": "Frag mich nach Plätzen oder Buchungen!",
     "examplePrompts": {
         "0": "Suche nach Padel-Plätzen in der Nähe von Frankfurt",
         "1": "Suche nach freien Doppelplätzen zwischen 17:00 und 20:00 Uhr"
+    },
+    "tool_names": {
+        "find_slots": "Suche nach freien Plätzen...",
+        "find_clubs_by_location": "Suche nach Clubs in der Nähe...",
+        "find_clubs_by_name": "Suche nach einem speziellen Club...",
+        "update_user_profile": "Aktualisiere deine Einstellungen...",
+        "create_booking_link": "Erstelle Buchungslink...",
+        "is_weekend": "Prüfe Datum...",
+        "default": "Überlege..."
     },
     "profileLabels": {
         "club": "🏟️ Club",

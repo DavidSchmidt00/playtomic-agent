@@ -214,7 +214,7 @@ npm run dev -- --port 8080
 3. Open your browser at http://localhost:8080 to use the chat interface.
 
 Notes:
-- The frontend only displays the final assistant reply (internal reasoning/tool output is hidden).
+- The frontend displays tool execution status (e.g. "Searching for clubs...") and the final assistant reply. Internal reasoning details are hidden.
 - Add API-related settings (e.g. GEMINI API keys) to `.env` when using the agent for real runs.
 
 ---

@@ -11,10 +11,10 @@ from playtomic_agent.models import Slot
 
 
 @tool(
-    description="Finds available slots for a specific club and date and filters them by court type, start time and duration."
+    description="Finds available slots for a specific club and date and filters them by court type, start time and duration. If this fails with ClubNotFoundError, use `find_clubs_by_name` to find the correct slug."
 )
 def find_slots(
-    club_slug: Annotated[str, "The slug of the club"],
+    club_slug: Annotated[str, "The slug of the club (e.g. 'lemon-padel-club', NOT 'Lemon Padel Limburg'). use `find_clubs_by_name` if unsure."],
     date: Annotated[str, "The date to check (YYYY-MM-DD)"],
     court_type: Annotated[
         Literal["SINGLE", "DOUBLE"] | None,
@@ -127,7 +127,7 @@ def find_clubs_by_location(
     except Exception:
         return None
 
-@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club'). Use only the core club name, without location suffixes.")
+@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club'). Returns the correct CLUB_SLUG needed for finding slots.")
 def find_clubs_by_name(
     name: Annotated[str, "The core club name to search for (e.g. 'Lemon Padel', not 'Lemon Padel Club Limburg')"],
 ) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:

@@ -1,11 +1,20 @@
 {
     "welcome": "Welcome to Padel Agent",
-    "placeholder": "e.g. 'Find a 90-min double court at lemon-padel-club tomorrow 18:00–20:00'",
+    "placeholder": "Message Padel Agent...",
     "send_btn": "Send",
-    "empty_state": "🎾 Ask me to find or book a padel court!",
+    "empty_state": "Ask me to find or book a padel court!",
     "examplePrompts": {
         "0": "Search for padel places near Frankfurt",
         "1": "Search for available double courts between 17:00 and 20:00"
+    },
+    "tool_names": {
+        "find_slots": "Looking for available courts...",
+        "find_clubs_by_location": "Searching for clubs near you...",
+        "find_clubs_by_name": "Searching for a specific club...",
+        "update_user_profile": "Updating your preferences...",
+        "create_booking_link": "Generating booking link...",
+        "is_weekend": "Checking date...",
+        "default": "Thinking..."
     },
     "profileLabels": {
         "club": "🏟️ Club",

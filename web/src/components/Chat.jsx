@@ -8,50 +8,57 @@ import ProfileSuggestion from './ProfileSuggestion'
 
 export default function Chat({ region }) {
   const { t } = useTranslation()
-  const [input, setInput] = useState('')
-  const [messages, setMessages] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [pendingSuggestions, setPendingSuggestions] = useState(null)
-  const messagesEndRef = useRef(null)
   const { profile, updateProfile, removePreference, clearProfile, PROFILE_LABELS } = useProfile()
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [toolStatus, setToolStatus] = useState(null)
+  const [pendingSuggestions, setPendingSuggestions] = useState([])
 
-  function handleAcceptSuggestions() {
-    if (pendingSuggestions) {
-      for (const s of pendingSuggestions) {
-        updateProfile(s.key, s.value)
-      }
-      setPendingSuggestions(null)
-    }
+  const messagesEndRef = useRef(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  function handleDismissSuggestions() {
-    setPendingSuggestions(null)
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, toolStatus, loading])
+
+  const acceptSuggestions = () => {
+    pendingSuggestions.forEach(s => updateProfile(s.key, s.value))
+    setPendingSuggestions([])
+  }
+
+  const dismissSuggestions = () => {
+    setPendingSuggestions([])
   }
 
   async function sendPrompt(e) {
-    e.preventDefault()
+    if (e) e.preventDefault()
     if (!input.trim()) return
 
     const prompt = input.trim()
     const newUserMsg = { role: 'user', text: prompt }
+    // Update messages immediately with user prompt
     const updatedMessages = [...messages, newUserMsg]
     setMessages(updatedMessages)
     setInput('')
     setLoading(true)
     setError(null)
+    setToolStatus(null)
 
     try {
       // Send full conversation history + user profile + region settings
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.text }))
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({
           messages: history,
           user_profile: Object.keys(profile).length > 0 ? profile : null,
@@ -62,24 +69,90 @@ export default function Chat({ region }) {
       })
 
       if (!res.ok) {
-        const detail = await res.json().catch(() => null)
-        const msg = detail?.detail || res.statusText || 'Request failed'
-        throw new Error(msg)
+        throw new Error(res.statusText || 'Request failed')
       }
 
-      const payload = await res.json()
-      setMessages((m) => [...m, { role: 'assistant', text: payload.text }])
+      // Read the stream
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let assistantMsg = { role: 'assistant', text: '' }
 
-      // Handle profile suggestions from the agent
-      if (payload.profile_suggestions && payload.profile_suggestions.length > 0) {
-        setPendingSuggestions(payload.profile_suggestions)
+      // Add a placeholder message for the assistant
+      setMessages((m) => [...m, assistantMsg])
+
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        buffer += chunk
+
+        const lines = buffer.split('\n')
+        // Keep the last part in the buffer as it might be incomplete
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (line.trim() === '') continue
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === 'tool_start') {
+                const toolName = data.tool || 'default'
+                // Try to find a translation, fallback to raw name if missing
+                const translatedStatus = t(`tool_names.${toolName}`, { defaultValue: `Executing ${toolName}...` })
+                setToolStatus(translatedStatus)
+              } else if (data.type === 'tool_end') {
+                // Delay clearing status to ensure it's visible and prevent flickering
+                setTimeout(() => setToolStatus(null), 2000)
+              } else if (data.type === 'message') {
+                assistantMsg.text = data.text
+                setMessages((prev) => {
+                  const newMsgs = [...prev]
+                  newMsgs[newMsgs.length - 1] = { ...assistantMsg }
+                  return newMsgs
+                })
+              } else if (data.type === 'profile_suggestion') {
+                setPendingSuggestions((prev) => {
+                  const exists = prev?.find(s => s.key === data.key && s.value === data.value)
+                  if (exists) return prev
+                  return [...(prev || []), { key: data.key, value: data.value }]
+                })
+              } else if (data.type === 'error') {
+                throw new Error(data.detail)
+              }
+            } catch (e) {
+              console.warn('Failed to parse SSE data:', line)
+            }
+          }
+        }
       }
+
     } catch (err) {
+      console.error(err)
       setError(err.message)
-      setMessages((m) => [...m, { role: 'assistant', text: '**Error:** ' + err.message }])
+      setMessages((m) => {
+        // If the last message is the empty assistant placeholder, replace it or append error
+        const last = m[m.length - 1]
+        if (last.role === 'assistant' && !last.text) {
+          const newMsgs = [...m]
+          newMsgs[newMsgs.length - 1] = { role: 'assistant', text: '**Error:** ' + err.message }
+          return newMsgs
+        }
+        return [...m, { role: 'assistant', text: '**Error:** ' + err.message }]
+      })
     } finally {
       setLoading(false)
+      setToolStatus(null)
     }
+  }
+
+  const handleSuggestionClick = (prompt) => {
+    setInput(prompt)
+    // Optional: auto-send
+    // setTimeout(() => sendPrompt(null), 0) -- but state update is async, better just set input
   }
 
   return (
@@ -90,50 +163,62 @@ export default function Chat({ region }) {
         onRemove={removePreference}
         onClear={clearProfile}
       />
+
       <div className="chat-box">
+        {pendingSuggestions.length > 0 && (
+          <ProfileSuggestion
+            suggestions={pendingSuggestions}
+            onAccept={acceptSuggestions}
+            onDismiss={dismissSuggestions}
+            PROFILE_LABELS={PROFILE_LABELS}
+          />
+        )}
+
         <div className="messages">
-          {messages.length === 0 && (
-            <div className="empty">
-              <span className="empty-icon">🎾</span>
-              {t('empty_state')}
-            </div>
-          )}
+          {messages.map((msg, i) => {
+            // Don't render empty assistant messages (waiting for stream)
+            if (msg.role === 'assistant' && !msg.text) return null
 
-          {messages.map((m, idx) => (
-            <div key={idx} className={`message ${m.role}`}>
-              <div className="bubble">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    a: ({ href, children }) => (
-                      <a href={href} target="_blank" rel="noopener noreferrer">
-                        {children}
-                      </a>
-                    ),
-                  }}
-                >
-                  {m.text}
-                </ReactMarkdown>
+            return (
+              <div key={i} className={`message ${msg.role}`}>
+                <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.text
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-
-          {pendingSuggestions && (
-            <ProfileSuggestion
-              suggestions={pendingSuggestions}
-              onAccept={handleAcceptSuggestions}
-              onDismiss={handleDismissSuggestions}
-              PROFILE_LABELS={PROFILE_LABELS}
-            />
-          )}
+            )
+          })}
 
           {loading && (
             <div className="message assistant">
-              <div className="bubble typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div className={`bubble ${toolStatus ? 'tool-execution' : 'typing-indicator'}`}>
+                {toolStatus ? (
+                  <span className="tool-status">⚙️ {toolStatus}</span>
+                ) : (
+                  <>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </>
+                )}
               </div>
+            </div>
+          )}
+
+          {messages.length === 0 && (
+            <div className="empty">
+              <span className="empty-icon">🎾</span>
+              <p>{t('empty_state')}</p>
             </div>
           )}
 
@@ -142,8 +227,8 @@ export default function Chat({ region }) {
 
         {messages.length === 0 && (
           <div className="suggestions-row">
-            {Object.values(t('examplePrompts', { returnObjects: true })).map((prompt, i) => (
-              <button key={i} className="suggestion-chip" onClick={() => setInput(prompt)}>
+            {Object.values(t('examplePrompts', { returnObjects: true }) || {}).map((prompt, i) => (
+              <button key={i} className="suggestion-chip" onClick={() => handleSuggestionClick(prompt)}>
                 {prompt}
               </button>
             ))}
@@ -162,6 +247,7 @@ export default function Chat({ region }) {
             {loading ? '...' : t('send_btn')}
           </button>
         </form>
+
         {error && <div className="error">{error}</div>}
       </div>
     </div>
