@@ -100,7 +100,10 @@ export default function Chat({ region }) {
               const data = JSON.parse(line.slice(6))
 
               if (data.type === 'tool_start') {
-                setToolStatus(`Executing ${data.tool || 'tool'}...`)
+                const toolName = data.tool || 'default'
+                // Try to find a translation, fallback to raw name if missing
+                const translatedStatus = t(`tool_names.${toolName}`, { defaultValue: `Executing ${toolName}...` })
+                setToolStatus(translatedStatus)
               } else if (data.type === 'tool_end') {
                 // Delay clearing status to ensure it's visible and prevent flickering
                 setTimeout(() => setToolStatus(null), 2000)
