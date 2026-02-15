@@ -1,4 +1,12 @@
 {
+    "errors": {
+        "NETWORK_ERROR": "Network connection lost. Please check your internet connection.",
+        "RATE_LIMIT_ERROR": "I'm receiving too many requests right now. Please try again in a minute.",
+        "RECURSION_LIMIT_ERROR": "I thought about this for too long and got stuck. Please try rephrasing your request.",
+        "PARSING_ERROR": "I couldn't understand the server response. Please try again.",
+        "INTERNAL_SERVER_ERROR": "Something went wrong. Please try again later."
+    },
+    "error_prefix": "Error",
     "welcome": "Welcome to Padel Agent",
     "placeholder": "Message Padel Agent...",
     "send_btn": "Send",
