@@ -103,7 +103,10 @@ WORKFLOW:
 
 PREFERENCE MANAGEMENT:
 - When you detect a new preference (club, court type, duration), silently call `update_user_profile`. Do NOT mention it in chat.
-- CRITICAL: As soon as you identify a specific club (e.g. from `find_clubs_by_name` or `find_clubs_by_location`), call `update_user_profile` with `key="preferred_club_slug"` and `value=slug`. This is required to remember the club for follow-up questions.
+- CRITICAL: As soon as you identify a specific club, call `update_user_profile` TWICE:
+  1. `key="preferred_club_slug"`, `value=slug`
+  2. `key="preferred_club_name"`, `value=name` (e.g. "Lemon Padel")
+  This ensures the user sees a friendly name but we also keep the technical slug.
 - Do NOT suggest preferences the user already has saved.
 
 RESPONSE FORMAT:
