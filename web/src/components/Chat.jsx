@@ -69,6 +69,12 @@ export default function Chat({ region }) {
       })
 
       if (!res.ok) {
+        if (res.status >= 500) {
+          throw new Error(t('errors.INTERNAL_SERVER_ERROR'))
+        }
+        if (res.status === 429) {
+          throw new Error(t('errors.RATE_LIMIT_ERROR'))
+        }
         throw new Error(res.statusText || 'Request failed')
       }
 
@@ -139,16 +145,23 @@ export default function Chat({ region }) {
 
     } catch (err) {
       console.error(err)
-      setError(err.message)
+
+      let errorMessage = err.message
+      // Detect browser network errors (fetch throws TypeError on network failure)
+      if (err.message === 'Failed to fetch' || err.message.includes('NetworkError') || err.name === 'TypeError') {
+        errorMessage = t('errors.NETWORK_ERROR')
+      }
+
+      setError(errorMessage)
       setMessages((m) => {
         // If the last message is the empty assistant placeholder, replace it or append error
         const last = m[m.length - 1]
         if (last.role === 'assistant' && !last.text) {
           const newMsgs = [...m]
-          newMsgs[newMsgs.length - 1] = { role: 'assistant', text: `**${t('error_prefix')}:** ` + err.message }
+          newMsgs[newMsgs.length - 1] = { role: 'assistant', text: `**${t('error_prefix')}:** ` + errorMessage }
           return newMsgs
         }
-        return [...m, { role: 'assistant', text: `**${t('error_prefix')}:** ` + err.message }]
+        return [...m, { role: 'assistant', text: `**${t('error_prefix')}:** ` + errorMessage }]
       })
     } finally {
       setLoading(false)
