@@ -5,7 +5,8 @@
     "empty_state": "Ask me to find or book a padel court!",
     "examplePrompts": {
         "0": "Search for padel places near Frankfurt",
-        "1": "Search for available double courts between 17:00 and 20:00"
+        "1": "Search for available double courts between 17:00 and 20:00",
+        "2": "Search for slots matching my preferences"
     },
     "tool_names": {
         "find_slots": "Looking for available courts...",

@@ -5,7 +5,8 @@
     "empty_state": "Frag mich nach Plätzen oder Buchungen!",
     "examplePrompts": {
         "0": "Suche nach Padel-Plätzen in der Nähe von Frankfurt",
-        "1": "Suche nach freien Doppelplätzen zwischen 17:00 und 20:00 Uhr"
+        "1": "Suche nach freien Doppelplätzen zwischen 17:00 und 20:00 Uhr",
+        "2": "Suche nach Slots mit meinen Einstellungen"
     },
     "tool_names": {
         "find_slots": "Suche nach freien Plätzen...",
