@@ -183,7 +183,12 @@ export default function Chat({ region }) {
               <div key={i} className={`message ${msg.role}`}>
                 <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
                   {msg.role === 'assistant' ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
+                      }}
+                    >
                       {msg.text}
                     </ReactMarkdown>
                   ) : (
