@@ -172,19 +172,24 @@ export default function Chat({ region }) {
         )}
 
         <div className="messages">
-          {messages.map((msg, i) => (
-            <div key={i} className={`message ${msg.role}`}>
-              <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
-                {msg.role === 'assistant' ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.text}
-                  </ReactMarkdown>
-                ) : (
-                  msg.text
-                )}
+          {messages.map((msg, i) => {
+            // Don't render empty assistant messages (waiting for stream)
+            if (msg.role === 'assistant' && !msg.text) return null
+
+            return (
+              <div key={i} className={`message ${msg.role}`}>
+                <div className={`bubble ${msg.role === 'assistant' ? 'markdown' : ''}`}>
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.text
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {loading && (
             <div className="message assistant">
