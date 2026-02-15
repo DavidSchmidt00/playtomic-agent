@@ -220,5 +220,3 @@ web/node_modules/
 web/dist/
 web/.vite/
 npm-debug.log*
-
-.agent/

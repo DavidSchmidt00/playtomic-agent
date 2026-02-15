@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Chat from './components/Chat'
 import RegionSelector from './components/RegionSelector'
@@ -9,7 +9,8 @@ export default function App() {
     return localStorage.getItem('padel-agent-theme') || 'dark'
   })
   const { region, setRegionId } = useRegion()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const chatRef = useRef(null)
 
   // Sync language with region
   useEffect(() => {
@@ -49,8 +50,9 @@ export default function App() {
         </div>
       </header>
       <main>
-        <Chat region={region} />
+        <Chat ref={chatRef} region={region} />
       </main>
     </div>
   )
 }
+

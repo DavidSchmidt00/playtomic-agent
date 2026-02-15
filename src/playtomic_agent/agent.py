@@ -13,6 +13,7 @@ from playtomic_agent.tools import (
     find_slots,
     is_weekend,
     update_user_profile,
+    suggest_next_steps,
 )
 
 # Load settings
@@ -25,6 +26,7 @@ TOOLS = [
     find_clubs_by_location,
     find_clubs_by_name,
     update_user_profile,
+    suggest_next_steps,
 ]
 
 
@@ -113,7 +115,9 @@ RESPONSE FORMAT:
 - Keep responses SHORT. Answer only what was asked.
 - Use markdown for formatting to make answers easy to read.
 - For each slot, display as: **local_time** - duration min - **price** on court [Book here](booking_link) (maybe translated to the user's language)
-- Do NOT suggest other clubs or add unsolicited information.{profile_section}"""
+- Do NOT suggest other clubs or add unsolicited information.
+- When presenting multiple choices (e.g., multiple clubs found, multiple independent slots), call `suggest_next_steps` with short, clickable options.
+- STRICTLY LIMIT SUGGESTIONS: Only use `suggest_next_steps` when there is a REAL DECICON for the user to make (e.g. choose between Club A and Club B, or Slot 1 and Slot 2). Do NOT use it for "Search again" or generic conversation. If there is only one option, just present it and do not show chips.{profile_section}"""
 
 
 def create_playtomic_agent(

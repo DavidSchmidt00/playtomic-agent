@@ -166,3 +166,11 @@ def update_user_profile(
     """Suggests a user preference update. The frontend will show a confirmation prompt."""
     return {"profile_update": {"key": key, "value": value}}
 
+
+@tool(description="Suggests short, clickable follow-up options to the user. Use this when you present a list of choices (e.g. multiple clubs, multiple time slots) or want to guide the user's next step. The options should be short text strings (e.g. 'Check Lemon Padel', 'Book 18:00', 'Search in Berlin').")
+def suggest_next_steps(
+    options: Annotated[list[str], "A list of short text options for the user to click."],
+) -> str:
+    """Sends a list of suggestion chips to the frontend."""
+    return "Suggestions sent to user."
+
