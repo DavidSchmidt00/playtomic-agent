@@ -121,7 +121,12 @@ export default function Chat({ region }) {
                   return [...(prev || []), { key: data.key, value: data.value }]
                 })
               } else if (data.type === 'error') {
-                throw new Error(data.detail)
+                // Try to find a translation for the error code
+                // Fallback to the detail/message provided by backend if no translation found
+                const errorKey = data.code ? `errors.${data.code}` : null
+                const errorMessage = errorKey ? t(errorKey, { defaultValue: data.message || data.detail }) : (data.message || data.detail)
+
+                throw new Error(errorMessage)
               }
             } catch (e) {
               console.warn('Failed to parse SSE data:', line)

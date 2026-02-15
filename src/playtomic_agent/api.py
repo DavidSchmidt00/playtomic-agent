@@ -83,6 +83,122 @@ def _extract_text(m) -> str | None:
     return None
 
 
+def _map_exception_to_error(exc: Exception) -> dict:
+    """Map exceptions to standard error codes and friendly messages."""
+    msg = str(exc)
+    
+    # 1. Network / Connection Errors
+    if "ConnectError" in msg or "Network is unreachable" in msg or "socket" in msg.lower():
+        return {
+            "code": "NETWORK_ERROR",
+            "message": "Network connection lost. Please check your internet connection.",
+            "detail": msg
+        }
+    
+    # 2. Rate Limits (Google GenAI)
+    if "429" in msg or "ResourceExhausted" in msg:
+        return {
+            "code": "RATE_LIMIT_ERROR",
+            "message": "I'm receiving too many requests right now. Please try again in a minute.",
+            "detail": msg
+        }
+
+    # 3. Recursion Limit (Agent getting stuck)
+    if "recursion limit" in msg.lower():
+        return {
+            "code": "RECURSION_LIMIT_ERROR",
+            "message": "I thought about this for too long and got stuck. Please try rephrasing your request.",
+            "detail": msg
+        }
+        
+    # 4. Parsing / JSON Errors
+    if "JSONDecodeError" in msg:
+        return {
+            "code": "PARSING_ERROR",
+            "message": "I couldn't understand the server response. Please try again.",
+            "detail": msg
+        }
+
+    # Default: Internal Error
+    return {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "Something went wrong. Please try again later.",
+        "detail": msg
+    }
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    """Accept a prompt, run the agent, and stream events via SSE.
+    
+    Events:
+    - tool_start: {"tool": "name", "input": "..."}
+    - tool_end: {"tool": "name", "output": "..."}
+    - message: {"text": "final response"}
+    - profile_suggestion: {"key": "...", "value": "..."}
+    - error: {"detail": "..."}
+    """
+    # Prepare input
+    if req.messages:
+        messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
+    elif req.prompt:
+        messages = [{"role": "user", "content": req.prompt}]
+    else:
+        raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
+
+    # Set context
+    set_request_region(
+        country=req.country,
+        language=req.language,
+        timezone=req.timezone,
+    )
+
+    agent = create_playtomic_agent(req.user_profile, language=req.language)
+
+def _map_exception_to_error(exc: Exception) -> dict:
+    """Map exceptions to standard error codes and friendly messages."""
+    msg = str(exc)
+    
+    # 1. Network / Connection Errors
+    if "ConnectError" in msg or "Network is unreachable" in msg or "socket" in msg.lower():
+        return {
+            "code": "NETWORK_ERROR",
+            "message": "Network connection lost. Please check your internet connection.",
+            "detail": msg
+        }
+    
+    # 2. Rate Limits (Google GenAI)
+    if "429" in msg or "ResourceExhausted" in msg:
+        return {
+            "code": "RATE_LIMIT_ERROR",
+            "message": "I'm receiving too many requests right now. Please try again in a minute.",
+            "detail": msg
+        }
+
+    # 3. Recursion Limit (Agent getting stuck)
+    if "recursion limit" in msg.lower():
+        return {
+            "code": "RECURSION_LIMIT_ERROR",
+            "message": "I thought about this for too long and got stuck. Please try rephrasing your request.",
+            "detail": msg
+        }
+        
+    # 4. Parsing / JSON Errors
+    if "JSONDecodeError" in msg:
+        return {
+            "code": "PARSING_ERROR",
+            "message": "I couldn't understand the server response. Please try again.",
+            "detail": msg
+        }
+
+    # Default: Internal Error
+    return {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "Something went wrong. Please try again later.",
+        "detail": msg
+    }
+
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     """Accept a prompt, run the agent, and stream events via SSE.
@@ -181,12 +297,18 @@ async def chat(req: ChatRequest):
                                 logging.debug("Stream yielded final message")
 
         except Exception as exc:
-            # Check for recursion error string since we might not have the class imported or it wraps
-            if "recursion limit" in str(exc).lower():
-                logging.error("Agent hit recursion limit")
-                yield f"data: {json.dumps({'type': 'error', 'detail': 'I thought about this for too long and got stuck. Please try rephrasing your request.'})}\n\n"
-            else:
-                logging.exception("Agent stream failed")
-                yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
+            logging.exception("Agent stream failed")
+            
+            error_info = _map_exception_to_error(exc)
+            
+            error_event = {
+                "type": "error",
+                "code": error_info["code"],
+                "message": error_info["message"], # Fallback
+                "detail": error_info["detail"]
+            }
+            
+            yield f"data: {json.dumps(error_event)}\n\n"
+            await asyncio.sleep(0.01) # Force flush
 
     return StreamingResponse(stream_agent_events(), media_type="text/event-stream")
