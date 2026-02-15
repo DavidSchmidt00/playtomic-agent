@@ -1,6 +1,6 @@
 {
     "welcome": "Willkommen beim Padel Agent",
-    "placeholder": "z.B. 'Finde einen 90-Minuten-Platz im Lemon Padel Club morgen 18:00–20:00'",
+    "placeholder": "Nachricht an Padel Agent...",
     "send_btn": "Senden",
     "empty_state": "Frag mich nach Plätzen oder Buchungen!",
     "examplePrompts": {
