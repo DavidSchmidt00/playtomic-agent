@@ -55,7 +55,10 @@ export default function Chat({ region }) {
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.text }))
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({
           messages: history,
           user_profile: Object.keys(profile).length > 0 ? profile : null,
@@ -95,8 +98,6 @@ export default function Chat({ region }) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
-
-              console.log('SSE Event:', data)
 
               if (data.type === 'tool_start') {
                 setToolStatus(`Executing ${data.tool || 'tool'}...`)

@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 import sys
-
+import json
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -81,9 +83,6 @@ def _extract_text(m) -> str | None:
     return None
 
 
-from fastapi.responses import StreamingResponse
-import json
-
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     """Accept a prompt, run the agent, and stream events via SSE.
@@ -131,6 +130,7 @@ async def chat(req: ChatRequest):
                                     # "input" turned out to cause JSON parsing issues on frontend if it contains quotes
                                 }
                                 yield f"data: {json.dumps(event)}\n\n"
+                                await asyncio.sleep(0.01) # Force flush
                                 logging.debug(f"Stream yielded tool_start: {tc.get('name')}")
 
                         # 2. Check for Tool Output (Tool End) & Profile Updates
@@ -151,6 +151,7 @@ async def chat(req: ChatRequest):
                                             "value": update["value"]
                                         }
                                         yield f"data: {json.dumps(event)}\n\n"
+                                        await asyncio.sleep(0.01) # Force flush
                                         logging.info(f"Stream yielded profile_suggestion: {update}")
                                 except Exception:
                                     pass
@@ -162,6 +163,7 @@ async def chat(req: ChatRequest):
                                 "output": str(content)[:200]  # truncate for log/stream
                             }
                             yield f"data: {json.dumps(event)}\n\n"
+                            await asyncio.sleep(0.01) # Force flush
                             logging.debug(f"Stream yielded tool_end: {tool_name}")
 
                         # 3. Check for Final Answer (Text)
@@ -175,6 +177,7 @@ async def chat(req: ChatRequest):
                                     "text": text
                                 }
                                 yield f"data: {json.dumps(event)}\n\n"
+                                await asyncio.sleep(0.01) # Force flush
                                 logging.debug("Stream yielded final message")
 
         except Exception as exc:
