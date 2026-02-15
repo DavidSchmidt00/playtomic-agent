@@ -219,29 +219,25 @@ Notes:
 
 ---
 
-## �🏗️ Architecture
+## 🏗️ Architecture
 
+For a deep dive into the project's internals, see the **[Developer Guide](DEVELOPER_GUIDE.md)**.
+
+### Quick Overview
+
+```mermaid
+graph TD
+    User[User] -->|Chat| Frontend[React Web UI]
+    Frontend -->|Unidirectional Stream| Backend[Python API (FastAPI)]
+    Backend -->|Orchestrates| Agent[LangGraph Agent]
+    Agent -->|Uses| Tools[Tools]
+    Tools -->|Calls| PlaytomicAPI[Playtomic API]
+    Agent -->|Queries| LLM[Google Gemini]
 ```
-playtomic-agent/
-├── src/playtomic_agent/         # Main package
-│   ├── agent.py                 # LangGraph AI agent
-│   ├── tools.py                 # LangChain tools for agent
-│   ├── config.py                # Configuration management
-│   ├── models.py                # Pydantic data models
-│   ├── client/                  # API client package
-│   │   ├── api.py               # PlaytomicClient class
-│   │   ├── exceptions.py        # Custom exceptions
-│   │   ├── utils.py             # Utility functions
-│   │   └── cli.py               # CLI implementation
-│   └── langgraph.json           # LangGraph configuration
-├── tests/                       # Comprehensive test suite
-│   ├── conftest.py              # Pytest fixtures
-│   ├── test_models.py           # Model tests
-│   ├── test_exceptions.py       # Exception tests
-│   └── test_client.py           # Client tests
-├── pyproject.toml               # Modern Python packaging
-└── .env                         # Environment configuration
-```
+
+The project is split into two main parts:
+1.  **Backend (`src/`)**: Python application using LangChain/LangGraph and FastAPI.
+2.  **Frontend (`web/`)**: React application using Vite.
 
 ## 🧪 Development
 
