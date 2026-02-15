@@ -22,8 +22,12 @@ RUN pip3 install -e .[dev]
 # Copy the rest of the project files
 COPY . .
 
+
 # Set environment variables (matching devcontainer)
 ENV PYTHONPATH="${PYTHONPATH}:/workspace/src"
 
 # Keep container running for interactive development
 CMD ["sleep", "infinity"]
+
+# Switch to non-root user
+USER vscode

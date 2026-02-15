@@ -452,6 +452,36 @@ body {
   overflow: hidden;
   transition: background var(--transition-speed), border-color var(--transition-speed),
     box-shadow var(--transition-speed);
+  position: relative;
+  /* For absolute positioning of header actions */
+}
+
+/* ─── Chat Header Actions ─── */
+/* .chat-header-actions removed */
+
+.new-chat-btn {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-input);
+  border-radius: 8px;
+  /* Match region-toggle radius */
+  width: 40px;
+  /* Fixed width for better touch target */
+  height: 38px;
+  /* Match approximate height of other inputs */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.new-chat-btn:hover {
+  background: var(--bg-surface-raised);
+  color: var(--error-color);
+  transform: rotate(15deg);
 }
 
 /* ─── Messages Area ─── */
@@ -578,6 +608,47 @@ body {
   border-top: 1px solid var(--border-color);
   margin-top: 0.5rem;
   transition: border-color var(--transition-speed);
+}
+
+.clear-chat-btn {
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.clear-chat-btn.confirming {
+  opacity: 1;
+  background: var(--bg-surface-raised);
+  border-color: var(--error-color);
+  color: var(--error-color);
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    border-color: var(--error-color);
+  }
+
+  to {
+    border-color: transparent;
+  }
+}
+
+.clear-chat-btn:hover {
+  background: var(--bg-surface-raised);
+  border-color: var(--bg-surface-raised);
+  color: var(--error-color);
+  opacity: 1;
 }
 
 .input-row input {

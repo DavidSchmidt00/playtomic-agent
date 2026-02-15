@@ -176,6 +176,20 @@ async def chat(req: ChatRequest):
                                 await asyncio.sleep(0.01) # Force flush
                                 logging.debug(f"Stream yielded tool_start: {tc.get('name')}")
 
+                                if tc.get("name") == "suggest_next_steps":
+                                    try:
+                                        args = tc.get("args", {})
+                                        if "options" in args and isinstance(args["options"], list):
+                                            chip_event = {
+                                                "type": "suggestion_chips",
+                                                "options": args["options"]
+                                            }
+                                            yield f"data: {json.dumps(chip_event)}\n\n"
+                                            await asyncio.sleep(0.01)
+                                            logging.info(f"Stream yielded suggestion_chips: {args['options']}")
+                                    except Exception as e:
+                                        logging.error(f"Failed to parse suggestions: {e}")
+
                         # 2. Check for Tool Output (Tool End) & Profile Updates
                         if getattr(m, "tool_call_id", None) is not None:
                             tool_name = getattr(m, "name", "unknown")
@@ -208,6 +222,24 @@ async def chat(req: ChatRequest):
                             yield f"data: {json.dumps(event)}\n\n"
                             await asyncio.sleep(0.01) # Force flush
                             logging.debug(f"Stream yielded tool_end: {tool_name}")
+
+                            # Check for suggestion chips
+                            if tool_name == "suggest_next_steps":
+                                try:
+                                    # Content might be stringified JSON or the return string
+                                    # Since tool returns a string, we need to grab the input args to see what options were passed
+                                    # But wait, we are in tool_end (output). We need the inputs?
+                                    # Actually, langchain graph state stores messages.
+                                    # The tool CALL has the args. The tool OUTPUT is just "Suggestions sent".
+                                    # We can capture the tool call arguments from the ToolMessage? No, ToolMessage only has artifact/content.
+                                    # We need to look at the corresponding AIMessage that called the tool.
+                                    # BUT, simpler: in `tool_start` we have the input! Can we emit it then?
+                                    # No, let's keep it simple. We can parse the input in `tool_start` or just rely on the fact that
+                                    # we are processing the tool execution.
+                                    # Let's look at `tool_start` above. It has `tc.get("args")`.
+                                    pass
+                                except Exception:
+                                    pass
 
                         # 3. Check for Final Answer (Text)
                         # We only want the *final* assistant message, not intermediate tool calls

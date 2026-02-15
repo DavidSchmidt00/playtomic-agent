@@ -43,6 +43,7 @@ The agent interacts with the world through these functions:
 *   **`find_clubs_by_location`**: Geocodes a user query (city/address) and finds nearby clubs.
 *   **`find_clubs_by_name`**:  Searches for a club by name. Critical for resolving "Lemon Padel" to the correct `club_slug`.
 *   **`update_user_profile`**:  A "silent" tool. The agent calls this to suggest saving a user preference (e.g., "I always play doubles"). The frontend intercepts this to show a UI prompt.
+*   **`suggest_next_steps`**: Emits clickable suggestion chips to the frontend (e.g. "Check Lemon Padel", "Book 18:00").
 *   **`create_booking_link`**: Generates the direct Playtomic booking URL.
 
 ### 3.3. API Layer (`src/playtomic_agent/api.py`)
@@ -53,6 +54,7 @@ Exposes the agent to the web frontend via a single endpoint: `POST /api/chat`.
     *   `tool_end`: Tool execution finished.
     *   `message`: Final text response from the agent.
     *   `profile_suggestion`: Agent suggests saving a preference.
+    *   `suggestion_chips`: List of clickable options for the user.
     *   `error`: Something went wrong.
 
 ### 3.4. API Client (`src/playtomic_agent/client/`)
@@ -108,6 +110,7 @@ Manages settings via `pydantic-settings`.
 Main chat interface.
 *   **State**: `messages` (list), `input`, `loading`, `toolStatus`.
 *   **SSE Handling**: Consumes the `/api/chat` stream. Parses `tool_start`, `tool_end`, etc.
+*   **New Chat**: "Trash" icon button clears chat history instantly (no confirmation).
 *   **Profile Integration**: Updates local storage profile based on `profile_suggestion` events.
 
 #### `hooks/useProfile.js`
