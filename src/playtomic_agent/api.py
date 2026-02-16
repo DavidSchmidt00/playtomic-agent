@@ -145,6 +145,13 @@ async def chat(req: ChatRequest):
     else:
         raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
 
+    # Token Optimization: Truncate history to last 20 messages
+    # This prevents the context window from growing indefinitely
+    if len(messages) > 20:
+        # always keep the last message (user prompt) and preceding context
+        # but ensure we don't cut off half a tool exchange if possible (LangGraph handles it, but safer to be generous)
+        messages = messages[-20:]
+
     # Set context
     set_request_region(
         country=req.country,

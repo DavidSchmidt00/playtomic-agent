@@ -11,7 +11,7 @@ from playtomic_agent.models import Slot
 
 
 @tool(
-    description="Finds available slots for a specific club and date and filters them by court type, start time and duration. If this fails with ClubNotFoundError, use `find_clubs_by_name` to find the correct slug."
+    description="Finds available slots for club/date. Filters: court_type, start_time, duration. On ClubNotFoundError, use `find_clubs_by_name`."
 )
 def find_slots(
     club_slug: Annotated[str, "The slug of the club (e.g. 'lemon-padel-club', NOT 'Lemon Padel Limburg'). use `find_clubs_by_name` if unsure."],
@@ -92,10 +92,10 @@ def is_weekend(date: Annotated[str, "The date to check (YYYY-MM-DD)"]):
     return datetime.strptime(date, "%Y-%m-%d").weekday() >= 5
 
 
-@tool(description="Finds clubs by location (city, region, or address). Use this when the user mentions a place (e.g. 'Clubs in Berlin').")
+@tool(description="Finds clubs by location/city. Use this for 'Clubs in Berlin'.")
 def find_clubs_by_location(
-    query: Annotated[str, "The search query (e.g. 'Berlin', 'Munich', 'Cologne')"],
-) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
+    query: Annotated[str, "Search query (e.g. 'Berlin', 'Munich')"],
+) -> Annotated[list[dict] | None, "List of found clubs."]:
     """Finds clubs near a specific location using geocoding."""
     try:
         from playtomic_agent.context import get_country
@@ -127,10 +127,10 @@ def find_clubs_by_location(
     except Exception:
         return None
 
-@tool(description="Finds clubs by name. Use this when the user mentions a specific club name (e.g. 'Lemon Padel', 'Red Club'). Returns the correct CLUB_SLUG needed for finding slots.")
+@tool(description="Finds clubs by name. Returns CLUB_SLUG needed for searching slots.")
 def find_clubs_by_name(
-    name: Annotated[str, "The core club name to search for (e.g. 'Lemon Padel', not 'Lemon Padel Club Limburg')"],
-) -> Annotated[list[dict] | None, "List of found clubs with name and slug."]:
+    name: Annotated[str, "Club name (e.g. 'Lemon Padel')"],
+) -> Annotated[list[dict] | None, "List of found clubs."]:
     """Finds clubs matching a specific name. Retries with shorter queries if needed."""
     try:
         with PlaytomicClient() as client:
@@ -158,11 +158,11 @@ def find_clubs_by_name(
     except Exception:
         return None
 
-@tool(description="Silently suggests saving a user preference. The UI will prompt the user to accept or decline. Call this whenever you detect a new preference from the user's request. Valid keys: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration', 'preferred_time'.")
+@tool(description="Silently saves user preference. KEYS: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration'.")
 def update_user_profile(
-    key: Annotated[str, "The preference key (e.g. 'preferred_club_slug', 'preferred_city', 'court_type')"],
-    value: Annotated[str, "The preference value (e.g. 'lemon-padel-club', 'Berlin', 'DOUBLE')"],
-) -> Annotated[dict, "A profile update instruction for the frontend."]:
+    key: Annotated[str, "Preference key"],
+    value: Annotated[str, "Preference value"],
+) -> Annotated[dict, "Profile update instruction."]:
     """Suggests a user preference update. The frontend will show a confirmation prompt."""
     return {"profile_update": {"key": key, "value": value}}
 

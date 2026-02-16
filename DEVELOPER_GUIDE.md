@@ -49,6 +49,8 @@ The agent interacts with the world through these functions:
 ### 3.3. API Layer (`src/playtomic_agent/api.py`)
 Exposes the agent to the web frontend via a single endpoint: `POST /api/chat`.
 *   **Streaming**: Uses Server-Sent Events (SSE) to stream the agent's "thought process" and final response.
+*   **Token Optimization**:
+    *   **History Truncation**: The API truncates conversation history to the last 20 messages to keep the context window manageable and reduce costs.
 *   **Event Types**:
     *   `tool_start`: Agent is calling a tool.
     *   `tool_end`: Tool execution finished.
