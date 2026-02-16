@@ -357,15 +357,6 @@ const Chat = forwardRef(({ region }, ref) => {
       />
 
       <div className="chat-box">
-        {pendingSuggestions.length > 0 && (
-          <ProfileSuggestion
-            suggestions={pendingSuggestions}
-            onAccept={acceptSuggestions}
-            onDismiss={dismissSuggestions}
-            PROFILE_LABELS={PROFILE_LABELS}
-          />
-        )}
-
         <div className="messages">
           {messages.map((msg, i) => {
             // Don't render empty assistant messages (waiting for stream)
@@ -416,6 +407,15 @@ const Chat = forwardRef(({ region }, ref) => {
 
           <div ref={messagesEndRef} />
         </div>
+
+        {pendingSuggestions.length > 0 && (
+          <ProfileSuggestion
+            suggestions={pendingSuggestions}
+            onAccept={acceptSuggestions}
+            onDismiss={dismissSuggestions}
+            PROFILE_LABELS={PROFILE_LABELS}
+          />
+        )}
 
         {/* Suggestion Chips from Agent */}
         {suggestionChips.length > 0 && (
