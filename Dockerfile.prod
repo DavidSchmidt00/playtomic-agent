@@ -1,0 +1,50 @@
+# Stage 1: Build the frontend
+FROM node:18-alpine as frontend-builder
+
+WORKDIR /app/web
+
+# Copy package files
+COPY web/package.json web/package-lock.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY web/ ./
+
+# Build the frontend
+RUN npm run build
+
+# Stage 2: Production Runtime
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies (if any)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy python dependencies
+COPY pyproject.toml .
+COPY README.md .
+COPY src/ ./src/
+
+# Install python dependencies
+RUN pip install --no-cache-dir -e .
+
+# Copy built frontend assets from stage 1
+COPY --from=frontend-builder /app/web/dist /app/static
+
+# Set environment variables
+ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+ENV STATIC_DIR="/app/static"
+ENV LOG_LEVEL="INFO"
+
+# Expose port (Cloud Run / Railway usually sets PORT env var)
+EXPOSE 8080
+
+# Run the application
+# We use shell form to allow variable expansion if needed, but array form is safer.
+# Hosting providers like Railway overwrite PORT. Uvicorn needs to listen on 0.0.0.0.
+CMD ["sh", "-c", "uvicorn playtomic_agent.api:app --host 0.0.0.0 --port ${PORT:-8080}"]

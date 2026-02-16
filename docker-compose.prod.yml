@@ -1,0 +1,14 @@
+services:
+  padel-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: padel-agent-prod
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Override if needed
+      PORT: 8080
+    restart: always
