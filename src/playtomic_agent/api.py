@@ -47,6 +47,12 @@ if os.path.isdir(STATIC_DIR):
         return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Railway."""
+    return {"status": "ok"}
+
+
 class ChatRequest(BaseModel):
     prompt: str | None = None
     messages: list[dict] | None = None
@@ -182,7 +188,7 @@ async def chat(req: ChatRequest):
             logging.debug(f"Starting agent stream with profile: {req.user_profile}")
             
             # Use "updates" mode to get each step of the graph
-            for chunk in agent.stream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}):
+            async for chunk in agent.astream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}):
                 for step, data in chunk.items():
                     logging.debug(f"Agent Step: {step}")
                     

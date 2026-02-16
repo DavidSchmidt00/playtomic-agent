@@ -23,6 +23,8 @@ This is the easiest way to host. Railway will build the `Dockerfile.prod` automa
 3.  **Configure**:
     *   Railway should auto-detect the `Dockerfile` (it might pick the dev one by default).
     *   Go to **Settings** -> **Build** -> **Dockerfile Path**. Change it to `Dockerfile.prod`.
+    *   **Health Check Path**: Set to `/health`.
+    *   **Restart Policy**: Always.
 4.  **Variables**:
     *   Go to **Variables**.
     *   Add `GEMINI_API_KEY`: Paste your API key.
