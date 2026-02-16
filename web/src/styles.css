@@ -824,24 +824,194 @@ body {
    Responsive
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
+
+  /* ─── Header ─── */
   .app-header {
-    padding: 1.25rem 1rem 0.25rem;
+    padding: 1rem 0.75rem 0.25rem;
   }
 
+  .app-header h1 {
+    font-size: 1.1rem;
+    gap: 0.4rem;
+  }
+
+  .header-icon {
+    font-size: 1.25rem;
+  }
+
+  .header-controls {
+    gap: 0.4rem;
+  }
+
+  /* ─── Chat Container ─── */
   .chat-container {
-    padding: 0.5rem 0.75rem 1rem;
+    padding: 0.4rem 0.5rem 0.5rem;
+    gap: 0.5rem;
   }
 
+  /* ─── Profile Card ─── */
+  .profile-card {
+    max-width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .profile-header span {
+    font-size: 0.78rem;
+  }
+
+  .profile-tag {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  /* ─── Chat Box (edge-to-edge on mobile) ─── */
   .chat-box {
-    padding: 0.75rem;
-    border-radius: var(--radius-md);
+    max-width: 100%;
+    padding: 0.6rem;
+    border-radius: var(--radius-sm);
+    border-left: none;
+    border-right: none;
+  }
+
+  /* ─── Messages ─── */
+  .messages {
+    padding: 0.25rem 0;
+  }
+
+  .message {
+    margin: 0.35rem 0;
   }
 
   .bubble {
-    max-width: 88%;
+    max-width: 92%;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .bubble.markdown {
+    font-size: 0.85rem;
+  }
+
+  .bubble.markdown h1 {
+    font-size: 1.1rem;
+  }
+
+  .bubble.markdown h2 {
+    font-size: 1rem;
+  }
+
+  .bubble.markdown h3 {
+    font-size: 0.92rem;
+  }
+
+  .bubble.markdown ul,
+  .bubble.markdown ol {
+    padding-left: 1.2rem;
+  }
+
+  .bubble.markdown pre {
+    font-size: 0.75rem;
+  }
+
+  .bubble.markdown table {
+    font-size: 0.78rem;
+  }
+
+  /* ─── Empty State ─── */
+  .empty {
+    padding: 2rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .empty-icon {
+    font-size: 2rem;
+  }
+
+  /* ─── Profile Suggestion (keep row, allow wrap) ─── */
+  .profile-suggestion {
+    flex-wrap: wrap;
+    gap: 0.3rem 0.5rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* ─── Suggestion Chips ─── */
+  .suggestion-chip {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .suggestions-row {
+    padding: 0.3rem 0.1rem;
+    gap: 0.35rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* ─── Input Row ─── */
+  .input-row {
+    gap: 0.35rem;
+    padding: 0.4rem 0;
+  }
+
+  .input-row input {
+    padding: 0.65rem 0.75rem;
+    font-size: 16px;
+    /* Prevents iOS auto-zoom on focus */
+    border-radius: var(--radius-sm);
   }
 
   .input-row input::placeholder {
+    font-size: 0.78rem;
+  }
+
+  .input-row button {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.82rem;
+    min-height: 44px;
+    /* Touch-friendly */
+  }
+
+  .clear-chat-btn {
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  /* ─── Region Dropdown ─── */
+  .region-dropdown {
+    min-width: 120px;
+  }
+
+  .region-option {
+    padding: 0.6rem 0.75rem;
+    min-height: 44px;
+    /* Touch-friendly */
+  }
+}
+
+/* ─── Extra small screens (< 380px) ─── */
+@media (max-width: 380px) {
+  .app-header h1 {
+    font-size: 0.95rem;
+  }
+
+  .chat-container {
+    padding: 0.25rem 0.25rem 0.4rem;
+  }
+
+  .chat-box {
+    padding: 0.4rem;
+  }
+
+  .bubble {
+    max-width: 95%;
+    font-size: 0.82rem;
+  }
+
+  .input-row button {
+    padding: 0.6rem 0.7rem;
     font-size: 0.78rem;
   }
 }
