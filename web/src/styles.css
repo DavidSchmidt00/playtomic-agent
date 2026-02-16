@@ -109,6 +109,8 @@ body {
    ═══════════════════════════════════════════════════════ */
 .app-root {
   height: 100vh;
+  /* Fallback for browsers that don't support dvh */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
