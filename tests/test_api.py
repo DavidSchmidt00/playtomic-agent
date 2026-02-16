@@ -1,62 +1,81 @@
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from playtomic_agent.api import app
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 
 def test_chat_agent_unavailable():
-    # In the CI/dev environment where model libs are not installed the API should return 503
-    res = client.post("/api/chat", json={"prompt": "Test prompt"})
-    assert res.status_code in (503, 500)
+    # If create_playtomic_agent raises an error (e.g. missing config), API should return 500
+    with patch("playtomic_agent.api.create_playtomic_agent", side_effect=ValueError("Config missing")):
+        res = client.post("/api/chat", json={"prompt": "Test prompt"})
+        assert res.status_code == 500
 
 
-def test_accepts_assistant_messages_without_role(monkeypatch):
+def test_accepts_assistant_messages_without_role():
     # Simulate an assistant message that does NOT include a `role` attribute but
     # exposes `content` as a list of dicts (like some model outputs).
     class DummyMsg:
         def __init__(self, text):
             self.content = [{"type": "text", "text": text}]
+            self.tool_calls = [] # Agent adds this check
+            self.tool_call_id = None
+            self.type = "ai"
 
     sample_text = "Hello from the assistant without a role"
 
-    def fake_stream(*args, **kwargs):
-        yield {"model": {"messages": [DummyMsg(sample_text)]}}
+    # Mock the agent and its stream method
+    mock_agent = MagicMock()
+    # The stream yields chunks. Each chunk is a dict {node: state}.
+    # The state has "messages".
+    mock_agent.stream.return_value = [
+        {"model": {"messages": [DummyMsg(sample_text)]}}
+    ]
 
-    monkeypatch.setattr("playtomic_agent.api.playtomic_agent.stream", fake_stream)
+    with patch("playtomic_agent.api.create_playtomic_agent", return_value=mock_agent):
+        res = client.post("/api/chat", json={"prompt": "Test prompt"})
+        assert res.status_code == 200
+        # The API streams events. We need to parse the SSE or check the raw text.
+        # client.post reads the response. res.text will contain "data: ...".
+        assert sample_text in res.text
 
-    res = client.post("/api/chat", json={"prompt": "Test prompt"})
-    assert res.status_code == 200
-    assert sample_text in res.json()["text"]
 
-
-def test_chat_with_message_history(monkeypatch):
-    """The agent should receive the full conversation history when messages are sent."""
+def test_chat_with_message_history():
+    """The agent should receive the full conversation history (truncated) when messages are sent."""
 
     class DummyMsg:
         def __init__(self, text):
             self.content = [{"type": "text", "text": text}]
+            self.tool_calls = []
+            self.tool_call_id = None
+            self.type = "ai" # needed for is_ai check
 
-    captured_input = {}
-
-    def fake_stream(input_data, **kwargs):
-        captured_input["messages"] = input_data["messages"]
-        yield {"model": {"messages": [DummyMsg("Follow-up answer")]}}
-
-    monkeypatch.setattr("playtomic_agent.api.playtomic_agent.stream", fake_stream)
-
-    history = [
-        {"role": "user", "content": "Find a court at lemon-padel-club"},
-        {"role": "assistant", "content": "Found a court at 20:00."},
-        {"role": "user", "content": "Find the next slot"},
+    # Mock agent
+    mock_agent = MagicMock()
+    mock_agent.stream.return_value = [
+         {"model": {"messages": [DummyMsg("Follow-up answer")]}}
     ]
-    res = client.post("/api/chat", json={"messages": history})
 
-    assert res.status_code == 200
-    assert res.json()["text"] == "Follow-up answer"
-    # Verify all 3 messages were forwarded to the agent
-    assert len(captured_input["messages"]) == 3
-    assert captured_input["messages"][0]["content"] == "Find a court at lemon-padel-club"
-    assert captured_input["messages"][2]["content"] == "Find the next slot"
+    with patch("playtomic_agent.api.create_playtomic_agent", return_value=mock_agent) as mock_create:
+        history = [{"role": "user", "content": f"msg {i}"} for i in range(25)]
+        
+        res = client.post("/api/chat", json={"messages": history})
+
+        assert res.status_code == 200
+        assert "Follow-up answer" in res.text
+        
+        # Verify call args to agent.stream
+        # mock_create returned mock_agent. 
+        # api.py calls: agent.stream({"messages": messages}, ...)
+        
+        call_args = mock_agent.stream.call_args
+        assert call_args is not None
+        input_data = call_args[0][0] # first arg
+        passed_messages = input_data["messages"]
+        
+        # Verify truncation (My new feature!)
+        assert len(passed_messages) == 20
+        assert passed_messages[-1]["content"] == "msg 24"
 
 
 def test_chat_missing_prompt_and_messages():
