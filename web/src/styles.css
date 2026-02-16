@@ -1042,7 +1042,7 @@ body {
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  mask-image: linear-gradient(to right, black 95%, transparent 100%);
+  -webkit-overflow-scrolling: touch;
 }
 
 .suggestions-row::-webkit-scrollbar {
@@ -1064,7 +1064,8 @@ body {
   transition: all 0.2s;
   font-family: inherit;
   text-align: left;
-  max-width: 100%;
+  /* max-width: 100%; removed */
+  white-space: nowrap;
 }
 
 .suggestion-chip:hover {
