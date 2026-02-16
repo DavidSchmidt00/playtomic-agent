@@ -3,11 +3,14 @@ import logging
 import os
 import sys
 import json
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from playtomic_agent.agent import create_playtomic_agent
 from playtomic_agent.context import set_request_region
@@ -21,6 +24,11 @@ logging.basicConfig(
 )
 
 app = FastAPI(title="Playtomic Agent API")
+
+# Setup Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Allow local frontend dev server access
 app.add_middleware(
@@ -149,7 +157,8 @@ def _map_exception_to_error(exc: Exception) -> dict:
     }
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
+@limiter.limit("100/day")
+async def chat(req: ChatRequest, request: Request): # Added request param for limiter
     """Accept a prompt, run the agent, and stream events via SSE.
     
     Events:
