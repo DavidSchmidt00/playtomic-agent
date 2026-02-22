@@ -21,6 +21,10 @@
 		"--env-file",
 		"${localWorkspaceFolder}/.env"
 	],
+	"mounts": [
+		"source=padel-agent-venv,target=${containerWorkspaceFolder}/.venv,type=volume",
+		"source=padel-agent-node-modules,target=${containerWorkspaceFolder}/web/node_modules,type=volume"
+	],
 	"customizations": {
 		"vscode": {
 			"extensions": []

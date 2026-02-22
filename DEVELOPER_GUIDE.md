@@ -24,7 +24,7 @@
 *   **Protocol**: Server-Sent Events (SSE) for streaming agent responses
 
 ### Infrastructure
-*   **Containerization**: Docker, Docker Compose
+*   **Containerization**: Docker
 *   **Dev Environment**: VS Code DevContainers, `.devcontainer` configuration
 
 ---
@@ -142,10 +142,6 @@ Manages User Preferences.
 *   **Backend**: `uvicorn playtomic_agent.api:app --reload --port 8082`
 *   **Frontend**: `cd web && npm run dev -- --port 8080`
 
-### Running with Docker
-```bash
-docker-compose up --build
-```
 
 ### Testing
 We use `pytest` for the backend.
