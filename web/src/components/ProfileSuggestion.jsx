@@ -28,4 +28,3 @@ export default function ProfileSuggestion({ suggestions, onAccept, onDismiss, PR
         </div>
     )
 }
-
