@@ -196,7 +196,8 @@ A minimal, extensible web frontend is included to interact with the LangGraph-ba
 
 1. Start the Dev Container in VS Code or Cursor.
 
-2. Access the unified dev server (FastAPI + React) according to the Dev Container port forwards (typically FastAPI on 8082, React on 8080).
+2. The Backend (FastAPI) and Frontend (React) servers will automatically start via VS Code Tasks.
+3. Access the web app at http://localhost:8080 to use the chat interface.
 
 If running outside the container:
 1. Install Python dependencies and start the API server:

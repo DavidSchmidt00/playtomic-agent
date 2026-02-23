@@ -16,7 +16,7 @@
 		8081,
 		8082
 	],
-	"postCreateCommand": "pip3 install -e .[dev]",
+	"postCreateCommand": "sudo chown -R vscode:vscode web/node_modules || true && pip3 install -e .[dev] && cd web && npm install",
 	"runArgs": [
 		"--env-file",
 		"${localWorkspaceFolder}/.env"

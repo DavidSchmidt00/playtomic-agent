@@ -138,9 +138,11 @@ Manages User Preferences.
 2.  **Environment Variables**:
     Copy `.env.example` to `.env` and fill in your `GEMINI_API_KEY`.
 
-### Running Locally
+### Running Locally (Outside Container)
 *   **Backend**: `uvicorn playtomic_agent.api:app --reload --port 8082`
 *   **Frontend**: `cd web && npm run dev -- --port 8080`
+
+> **Note on Devcontainers**: When using the VS Code Devcontainer, the backend and frontend are automatically started via VS Code Tasks upon opening the workspace.
 
 
 ### Testing
