@@ -7,14 +7,16 @@ from langchain_core.tools import tool
 
 from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.utils import create_booking_link as utils_create_booking_link
-from playtomic_agent.models import Slot
 
 
 @tool(
     description="Finds available slots for club/date. Filters: court_type, start_time, duration. On ClubNotFoundError, use `find_clubs_by_name`."
 )
 def find_slots(
-    club_slug: Annotated[str, "The slug of the club (e.g. 'lemon-padel-club', NOT 'Lemon Padel Limburg'). use `find_clubs_by_name` if unsure."],
+    club_slug: Annotated[
+        str,
+        "The slug of the club (e.g. 'lemon-padel-club', NOT 'Lemon Padel Limburg'). use `find_clubs_by_name` if unsure.",
+    ],
     date: Annotated[str, "The date to check (YYYY-MM-DD)"],
     court_type: Annotated[
         Literal["SINGLE", "DOUBLE"] | None,
@@ -31,6 +33,7 @@ def find_slots(
     """Find available slots using PlaytomicClient."""
     try:
         from playtomic_agent.config import get_settings
+
         effective_tz = timezone or get_settings().default_timezone
         with PlaytomicClient() as client:
             slots = client.find_slots(
@@ -41,7 +44,7 @@ def find_slots(
                 end_time=end_time,
                 timezone=effective_tz,
                 duration=duration,
-                log_slots=True
+                log_slots=True,
             )
             if not slots:
                 return {"count": 0, "slots": []}
@@ -49,7 +52,9 @@ def find_slots(
             # Return compact summaries with pre-computed local times and booking links
             # Limit to 10 slots to keep LLM context manageable
             from zoneinfo import ZoneInfo
+
             from playtomic_agent.client.utils import create_booking_link as _make_link
+
             tz = ZoneInfo(effective_tz)
             return {
                 "count": len(slots),
@@ -61,7 +66,8 @@ def find_slots(
                         "duration": s.duration,
                         "price": s.price,
                         "booking_link": _make_link(
-                            s.club_id, s.court_id,
+                            s.club_id,
+                            s.court_id,
                             s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                             s.duration,
                         ),
@@ -71,6 +77,7 @@ def find_slots(
             }
     except Exception as exc:
         import logging
+
         logging.exception(f"find_slots failed: {exc}")
         return None
 
@@ -99,21 +106,21 @@ def find_clubs_by_location(
     """Finds clubs near a specific location using geocoding."""
     try:
         from playtomic_agent.context import get_country
-        
+
         # Use per-request country
         try:
             country = get_country()
         except (ImportError, LookupError):
             country = None
-            
+
         with PlaytomicClient() as client:
             coordinates = client.geocode(query, country_code=country)
             if not coordinates:
                 return None
-            
+
             lat, lon = coordinates
             clubs = client.search_clubs(query, lat=lat, lon=lon)
-            
+
             # Limit to top 5 result
             return [
                 {
@@ -126,6 +133,7 @@ def find_clubs_by_location(
             ]
     except Exception:
         return None
+
 
 @tool(description="Finds clubs by name. Returns CLUB_SLUG needed for searching slots.")
 def find_clubs_by_name(
@@ -158,7 +166,10 @@ def find_clubs_by_name(
     except Exception:
         return None
 
-@tool(description="Silently saves user preference. KEYS: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration'.")
+
+@tool(
+    description="Silently saves user preference. KEYS: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', 'court_type', 'duration'."
+)
 def update_user_profile(
     key: Annotated[str, "Preference key"],
     value: Annotated[str, "Preference value"],
@@ -167,10 +178,11 @@ def update_user_profile(
     return {"profile_update": {"key": key, "value": value}}
 
 
-@tool(description="Suggests short, clickable follow-up options to the user. Use this when you present a list of choices (e.g. multiple clubs, multiple time slots) or want to guide the user's next step. The options should be short text strings (e.g. 'Check Lemon Padel', 'Book 18:00', 'Search in Berlin').")
+@tool(
+    description="Suggests short, clickable follow-up options to the user. Use this when you present a list of choices (e.g. multiple clubs, multiple time slots) or want to guide the user's next step. The options should be short text strings (e.g. 'Check Lemon Padel', 'Book 18:00', 'Search in Berlin')."
+)
 def suggest_next_steps(
     options: Annotated[list[str], "A list of short text options for the user to click."],
 ) -> str:
     """Sends a list of suggestion chips to the frontend."""
     return "Suggestions sent to user."
-
