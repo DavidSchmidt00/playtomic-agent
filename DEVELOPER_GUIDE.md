@@ -24,7 +24,7 @@
 *   **Protocol**: Server-Sent Events (SSE) for streaming agent responses
 
 ### Infrastructure
-*   **Containerization**: Docker, Docker Compose
+*   **Containerization**: Docker
 *   **Dev Environment**: VS Code DevContainers, `.devcontainer` configuration
 
 ---
@@ -138,14 +138,12 @@ Manages User Preferences.
 2.  **Environment Variables**:
     Copy `.env.example` to `.env` and fill in your `GEMINI_API_KEY`.
 
-### Running Locally
+### Running Locally (Outside Container)
 *   **Backend**: `uvicorn playtomic_agent.api:app --reload --port 8082`
 *   **Frontend**: `cd web && npm run dev -- --port 8080`
 
-### Running with Docker
-```bash
-docker-compose up --build
-```
+> **Note on Devcontainers**: When using the VS Code Devcontainer, the backend and frontend are automatically started via VS Code Tasks upon opening the workspace.
+
 
 ### Testing
 We use `pytest` for the backend.

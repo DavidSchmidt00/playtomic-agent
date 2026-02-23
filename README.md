@@ -194,9 +194,13 @@ The agent can remember your preferences across sessions using Browser Local Stor
 
 A minimal, extensible web frontend is included to interact with the LangGraph-based Playtomic agent. The frontend is a small React app (Vite) that talks to a FastAPI endpoint exposed by the Python service. It provides a centered chat UI with Markdown rendering, a loading indicator, and a user profile card.
 
-Quick start (Dev Container):
+1. Start the Dev Container in VS Code or Cursor.
 
-1. Install Python dependencies and start the API server (port 8082):
+2. The Backend (FastAPI) and Frontend (React) servers will automatically start via VS Code Tasks.
+3. Access the web app at http://localhost:8080 to use the chat interface.
+
+If running outside the container:
+1. Install Python dependencies and start the API server:
 
 ```bash
 pip install -e .
