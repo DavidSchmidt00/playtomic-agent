@@ -30,7 +30,7 @@ def main():
         description="Playtomic Agent CLI",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
+    
     # Global arguments
     parser.add_argument(
         "--verbose",
@@ -133,12 +133,12 @@ def main():
                     if not coords:
                         logger.error(f"Could not find coordinates for location: {args.location}")
                         return 1
-
+                    
                     lat, lon = coords
                     logger.info(f"Found coordinates: {lat}, {lon}. Searching for clubs...")
                     clubs = client.search_clubs(args.location, lat=lat, lon=lon, radius=args.radius)
                     _print_clubs(clubs)
-
+                
                 elif args.name:
                     logger.info(f"Searching for club name: {args.name}")
                     clubs = client.search_clubs(args.name)
