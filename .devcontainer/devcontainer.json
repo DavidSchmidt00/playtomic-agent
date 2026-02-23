@@ -28,8 +28,7 @@
 			"extensions": [
 				"Anthropic.claude-code",
 				"ms-python.python",
-				"ms-python.vscode-pylance",
-				"charliermarsh.ruff",
+					"charliermarsh.ruff",
 				"dbaeumer.vscode-eslint"
 			]
 		}
