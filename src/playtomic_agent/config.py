@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         description="Default timezone for the application",
     )
 
+
     # API Configuration
     playtomic_api_base_url: str = Field(
         default="https://api.playtomic.io/v1",

@@ -184,15 +184,15 @@ const Chat = forwardRef(({ region }, ref) => {
 
   const handleSuggestionClick = (prompt) => {
     setInput(prompt)
-    // Use a timeout to ensure state update of input processes before submitting?
-    // Actually, sendPrompt uses `input` state.
-    // Check React batching.
+    // Use a timeout to ensure state update of input processes before submitting? 
+    // Actually, sendPrompt uses `input` state. 
+    // Check React batching. 
     // Better to just call a helper that accepts the text directly or triggers the effect.
     // For simplicity with current `sendPrompt` which relies on `input` state:
     // We can't easily auto-submit without refactoring `sendPrompt` to take an argument.
-    // Let's refactor sendPrompt slightly?
-    // No, risk of breaking things.
-    // Let's just set input. The user can press enter.
+    // Let's refactor sendPrompt slightly? 
+    // No, risk of breaking things. 
+    // Let's just set input. The user can press enter. 
     // "There should be clickable options for a fast user-response" -> implies auto-send.
     // I will refactor sendPrompt to accept an override text.
   }

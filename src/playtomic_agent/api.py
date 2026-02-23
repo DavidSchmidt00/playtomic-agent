@@ -1,17 +1,16 @@
 import asyncio
-import json
 import logging
 import os
 import sys
-
+import json
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from playtomic_agent.agent import create_playtomic_agent
 from playtomic_agent.context import set_request_region
@@ -45,7 +44,7 @@ app.add_middleware(
 STATIC_DIR = os.environ.get("STATIC_DIR", "/app/static")
 if os.path.isdir(STATIC_DIR):
     app.mount("/assets", StaticFiles(directory=f"{STATIC_DIR}/assets"), name="assets")
-
+    
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         # Serve index.html for unknown paths (SPA routing)
@@ -91,7 +90,7 @@ def _extract_text(m) -> str | None:
             for cb in cbs:
                 t = getattr(cb, "text", None)
                 if t:
-                    return str(t)
+                    return t
     except Exception:
         pass
 
@@ -102,7 +101,11 @@ def _extract_text(m) -> str | None:
             return content
         elif isinstance(content, list | tuple):
             for item in content:
-                if isinstance(item, dict) and item.get("type") == "text" and item.get("text"):
+                if (
+                    isinstance(item, dict)
+                    and item.get("type") == "text"
+                    and item.get("text")
+                ):
                     return item.get("text")
     except Exception:
         pass
@@ -113,21 +116,21 @@ def _extract_text(m) -> str | None:
 def _map_exception_to_error(exc: Exception) -> dict:
     """Map exceptions to standard error codes and friendly messages."""
     msg = str(exc)
-
+    
     # 1. Network / Connection Errors
     if "ConnectError" in msg or "Network is unreachable" in msg or "socket" in msg.lower():
         return {
             "code": "NETWORK_ERROR",
             "message": "Network connection lost. Please check your internet connection.",
-            "detail": msg,
+            "detail": msg
         }
-
+    
     # 2. Rate Limits (Google GenAI)
     if "429" in msg or "ResourceExhausted" in msg:
         return {
             "code": "RATE_LIMIT_ERROR",
             "message": "I'm receiving too many requests right now. Please try again in a minute.",
-            "detail": msg,
+            "detail": msg
         }
 
     # 3. Recursion Limit (Agent getting stuck)
@@ -135,30 +138,29 @@ def _map_exception_to_error(exc: Exception) -> dict:
         return {
             "code": "RECURSION_LIMIT_ERROR",
             "message": "I thought about this for too long and got stuck. Please try rephrasing your request.",
-            "detail": msg,
+            "detail": msg
         }
-
+        
     # 4. Parsing / JSON Errors
     if "JSONDecodeError" in msg:
         return {
             "code": "PARSING_ERROR",
             "message": "I couldn't understand the server response. Please try again.",
-            "detail": msg,
+            "detail": msg
         }
 
     # Default: Internal Error
     return {
         "code": "INTERNAL_SERVER_ERROR",
         "message": "Something went wrong. Please try again later.",
-        "detail": msg,
+        "detail": msg
     }
-
 
 @app.post("/api/chat")
 @limiter.limit("100/day")
-async def chat(req: ChatRequest, request: Request):  # Added request param for limiter
+async def chat(req: ChatRequest, request: Request): # Added request param for limiter
     """Accept a prompt, run the agent, and stream events via SSE.
-
+    
     Events:
     - tool_start: {"tool": "name", "input": "..."}
     - tool_end: {"tool": "name", "output": "..."}
@@ -172,9 +174,7 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
     elif req.prompt:
         messages = [{"role": "user", "content": req.prompt}]
     else:
-        raise HTTPException(
-            status_code=400, detail="Either 'prompt' or 'messages' must be provided."
-        )
+        raise HTTPException(status_code=400, detail="Either 'prompt' or 'messages' must be provided.")
 
     # Token Optimization: Truncate history to last 20 messages
     # This prevents the context window from growing indefinitely
@@ -195,14 +195,12 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
     async def stream_agent_events():
         try:
             logging.debug(f"Starting agent stream with profile: {req.user_profile}")
-
+            
             # Use "updates" mode to get each step of the graph
-            async for chunk in agent.astream(
-                {"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}
-            ):
+            async for chunk in agent.astream({"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}):
                 for step, data in chunk.items():
                     logging.debug(f"Agent Step: {step}")
-
+                    
                     for m in data.get("messages", []):
                         # 1. Check for Tool Calls (Tool Start)
                         if getattr(m, "tool_calls", None):
@@ -213,7 +211,7 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
                                     # "input" turned out to cause JSON parsing issues on frontend if it contains quotes
                                 }
                                 yield f"data: {json.dumps(event)}\n\n"
-                                await asyncio.sleep(0.01)  # Force flush
+                                await asyncio.sleep(0.01) # Force flush
                                 logging.debug(f"Stream yielded tool_start: {tc.get('name')}")
 
                                 if tc.get("name") == "suggest_next_steps":
@@ -222,13 +220,11 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
                                         if "options" in args and isinstance(args["options"], list):
                                             chip_event = {
                                                 "type": "suggestion_chips",
-                                                "options": args["options"],
+                                                "options": args["options"]
                                             }
                                             yield f"data: {json.dumps(chip_event)}\n\n"
                                             await asyncio.sleep(0.01)
-                                            logging.info(
-                                                f"Stream yielded suggestion_chips: {args['options']}"
-                                            )
+                                            logging.info(f"Stream yielded suggestion_chips: {args['options']}")
                                     except Exception as e:
                                         logging.error(f"Failed to parse suggestions: {e}")
 
@@ -236,23 +232,21 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
                         if getattr(m, "tool_call_id", None) is not None:
                             tool_name = getattr(m, "name", "unknown")
                             content = getattr(m, "content", "")
-
+                            
                             # Check for profile update
                             if tool_name == "update_user_profile":
                                 try:
                                     # Content might be stringified JSON
-                                    parsed = (
-                                        json.loads(content) if isinstance(content, str) else content
-                                    )
+                                    parsed = json.loads(content) if isinstance(content, str) else content
                                     if isinstance(parsed, dict) and "profile_update" in parsed:
                                         update = parsed["profile_update"]
                                         event = {
                                             "type": "profile_suggestion",
                                             "key": update["key"],
-                                            "value": update["value"],
+                                            "value": update["value"]
                                         }
                                         yield f"data: {json.dumps(event)}\n\n"
-                                        await asyncio.sleep(0.01)  # Force flush
+                                        await asyncio.sleep(0.01) # Force flush
                                         logging.info(f"Stream yielded profile_suggestion: {update}")
                                 except Exception:
                                     pass
@@ -261,10 +255,10 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
                             event = {
                                 "type": "tool_end",
                                 "tool": tool_name,
-                                "output": str(content)[:200],  # truncate for log/stream
+                                "output": str(content)[:200]  # truncate for log/stream
                             }
                             yield f"data: {json.dumps(event)}\n\n"
-                            await asyncio.sleep(0.01)  # Force flush
+                            await asyncio.sleep(0.01) # Force flush
                             logging.debug(f"Stream yielded tool_end: {tool_name}")
 
                             # Check for suggestion chips
@@ -287,30 +281,31 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
 
                         # 3. Check for Final Answer (Text)
                         # We only want the *final* assistant message, not intermediate tool calls
-                        is_ai = (
-                            m.__class__.__name__ == "AIMessage" or getattr(m, "type", "") == "ai"
-                        )
+                        is_ai = m.__class__.__name__ == "AIMessage" or getattr(m, "type", "") == "ai"
                         if is_ai and not getattr(m, "tool_calls", None):
                             text = _extract_text(m)
                             if text:
-                                event = {"type": "message", "text": text}
+                                event = {
+                                    "type": "message",
+                                    "text": text
+                                }
                                 yield f"data: {json.dumps(event)}\n\n"
-                                await asyncio.sleep(0.01)  # Force flush
+                                await asyncio.sleep(0.01) # Force flush
                                 logging.debug("Stream yielded final message")
 
         except Exception as exc:
             logging.exception("Agent stream failed")
-
+            
             error_info = _map_exception_to_error(exc)
-
+            
             error_event = {
                 "type": "error",
                 "code": error_info["code"],
-                "message": error_info["message"],  # Fallback
-                "detail": error_info["detail"],
+                "message": error_info["message"], # Fallback
+                "detail": error_info["detail"]
             }
-
+            
             yield f"data: {json.dumps(error_event)}\n\n"
-            await asyncio.sleep(0.01)  # Force flush
+            await asyncio.sleep(0.01) # Force flush
 
     return StreamingResponse(stream_agent_events(), media_type="text/event-stream")

@@ -151,7 +151,7 @@ class PlaytomicClient:
         try:
             # Respect Nominatim policy with User-Agent
             headers = {"User-Agent": "PlaytomicAgent/1.0 (Educational Project)"}
-            params: dict[str, str | int] = {"q": query, "format": "json", "limit": 1}
+            params = {"q": query, "format": "json", "limit": 1}
             if country_code:
                 params["countrycodes"] = country_code.lower()
             response = requests.get(
@@ -184,7 +184,7 @@ class PlaytomicClient:
             List of matching clubs
         """
         try:
-            params: dict[str, str | int] = {}
+            params = {}
             if lat is not None and lon is not None:
                 params = {
                     "sport_id": "PADEL",
@@ -223,13 +223,8 @@ class PlaytomicClient:
                 # Handle variations in API response structure
                 club_id = club_data.get("tenant_id") or club_data.get("id")
                 name = club_data.get("tenant_name") or club_data.get("name")
-                slug = (
-                    club_data.get("tenant_uid")
-                    or club_data.get("slug")
-                    or club_data.get("link")
-                    or ""
-                )
-
+                slug = club_data.get("tenant_uid") or club_data.get("slug") or club_data.get("link") or ""
+                
                 # Timezone might be nested in address or direct
                 timezone = club_data.get("timezone")
                 if not timezone:
