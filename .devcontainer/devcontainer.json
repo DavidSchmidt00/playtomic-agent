@@ -7,23 +7,30 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {
-			"version": "latest"
+			"version": "22"
 		},
 		"ghcr.io/eliises/devcontainer-features/devcontainers-cli:1": {}
 	},
 	"forwardPorts": [
 		8080,
-		8081,
 		8082
 	],
-	"postCreateCommand": "pip3 install -e .[dev]",
+	"postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
 	"runArgs": [
 		"--env-file",
 		"${localWorkspaceFolder}/.env"
 	],
+	"mounts": [
+		"source=padel-agent-node-modules,target=${containerWorkspaceFolder}/web/node_modules,type=volume"
+	],
 	"customizations": {
 		"vscode": {
-			"extensions": []
+			"extensions": [
+				"Anthropic.claude-code",
+				"ms-python.python",
+					"charliermarsh.ruff",
+				"dbaeumer.vscode-eslint"
+			]
 		}
 	},
 	"containerEnv": {

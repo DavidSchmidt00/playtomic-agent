@@ -12,8 +12,8 @@ from playtomic_agent.tools import (
     find_clubs_by_name,
     find_slots,
     is_weekend,
-    update_user_profile,
     suggest_next_steps,
+    update_user_profile,
 )
 
 # Load settings
@@ -62,7 +62,9 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
     if user_profile:
         prefs = []
         if user_profile.get("preferred_club_name"):
-            prefs.append(f"- Preferred club: {user_profile['preferred_club_name']} (slug: {user_profile.get('preferred_club_slug', 'unknown')})")
+            prefs.append(
+                f"- Preferred club: {user_profile['preferred_club_name']} (slug: {user_profile.get('preferred_club_slug', 'unknown')})"
+            )
         if user_profile.get("preferred_city"):
             prefs.append(f"- Preferred city: {user_profile['preferred_city']}")
         if user_profile.get("court_type"):
@@ -73,14 +75,27 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
             prefs.append(f"- Preferred time: {user_profile['preferred_time']}")
 
         if prefs:
-            profile_section = "\n\nUSER PREFERENCES (from previous sessions):\n" + "\n".join(prefs) + "\nUse these as defaults when the user doesn't specify. Do NOT ask for these values if they are already set."
+            profile_section = (
+                "\n\nUSER PREFERENCES (from previous sessions):\n"
+                + "\n".join(prefs)
+                + "\nUse these as defaults when the user doesn't specify. Do NOT ask for these values if they are already set."
+            )
 
-    lang_map = {"de": "German", "en": "English", "es": "Spanish", "fr": "French", "it": "Italian", "pt": "Portuguese", "nl": "Dutch"}
-    
+    lang_map = {
+        "de": "German",
+        "en": "English",
+        "es": "Spanish",
+        "fr": "French",
+        "it": "Italian",
+        "pt": "Portuguese",
+        "nl": "Dutch",
+    }
+
     # Use provided language or fall back to context/settings
     if not language:
         try:
             from playtomic_agent.context import get_language
+
             language = get_language()
         except ImportError:
             language = "en"
@@ -88,7 +103,7 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
     lang_name = lang_map.get(language, language)
 
     return f"""You are a Padel court finder assistant. Today: {datetime.now().strftime("%Y-%m-%d")}. Timezone: {settings.default_timezone}. Language: {lang_name}.
-    
+
 GOAL: help users find and book Padel courts.
 
 RULES:
