@@ -38,20 +38,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL", description="Logging level")
 
     # WhatsApp integration (optional — only required when running whatsapp-agent)
-    whatsapp_token: str | None = Field(
-        default=None,
-        alias="WHATSAPP_TOKEN",
-        description="Meta WhatsApp Cloud API bearer token",
-    )
-    whatsapp_phone_number_id: str | None = Field(
-        default=None,
-        alias="WHATSAPP_PHONE_NUMBER_ID",
-        description="Phone number ID from Meta Business Manager",
-    )
-    whatsapp_verify_token: str | None = Field(
-        default=None,
-        alias="WHATSAPP_VERIFY_TOKEN",
-        description="Webhook verify token (chosen by us, verified by Meta)",
+    whatsapp_session_db: str = Field(
+        default="data/whatsapp_session.db",
+        alias="WHATSAPP_SESSION_DB",
+        description="Path to the SQLite file where Neonize stores the WhatsApp session",
     )
     whatsapp_storage_path: str = Field(
         default="data/whatsapp_users.json",
