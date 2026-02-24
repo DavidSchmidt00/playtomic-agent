@@ -15,7 +15,7 @@ pip3 install -e ".[dev]"
 cd web && npm install && cd ..
 
 # Install Claude Code CLI for terminal usage
-npm install -g @anthropic-ai/claude-code
+# npm install -g @anthropic-ai/claude-code
 
 # Activate pre-commit hooks so they run on every commit
 pre-commit install
