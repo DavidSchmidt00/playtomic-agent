@@ -14,7 +14,7 @@ class UserState:
 
     profile: dict = field(default_factory=dict)
     history: list[dict] = field(default_factory=list)
-    language: str = "en"
+    language: str = ""  # BCP-47 code e.g. "de", "en" — empty until first detected
 
 
 class UserStorage:
@@ -55,7 +55,7 @@ class UserStorage:
         return UserState(
             profile=raw.get("profile", {}),
             history=raw.get("history", []),
-            language=raw.get("language", "en"),
+            language=raw.get("language", ""),
         )
 
     def save(self, sender_id: str, state: UserState) -> None:

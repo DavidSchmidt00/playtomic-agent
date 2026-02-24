@@ -1,9 +1,7 @@
 import json
 from datetime import datetime
-from typing import Annotated
 
 from langchain.agents import create_agent
-from langchain_core.tools import tool
 from langgraph.graph.state import CompiledStateGraph
 
 from playtomic_agent.config import get_settings
@@ -20,18 +18,6 @@ from playtomic_agent.tools import (
 settings = get_settings()
 
 
-@tool(description="Present available padel slots as a WhatsApp poll for user selection.")
-def present_slots_as_poll(
-    slots: Annotated[
-        list[dict],
-        "List of slot dicts (local_time, duration, price, booking_link). Max 12 shown.",
-    ],
-    question: Annotated[str, "Short poll question, e.g. 'Which slot do you want to book?'"],
-) -> Annotated[dict, "Poll payload forwarded to WhatsApp."]:
-    """Sends a native WhatsApp poll with the available slot options."""
-    return {"wa_poll": {"question": question, "slots": slots[:12]}}
-
-
 WA_TOOLS = [
     find_slots,
     create_booking_link,
@@ -39,11 +25,10 @@ WA_TOOLS = [
     find_clubs_by_location,
     find_clubs_by_name,
     update_user_profile,
-    present_slots_as_poll,
 ]
 
 
-def _build_system_prompt(user_profile: dict | None = None, language: str | None = None) -> str:
+def _build_system_prompt(user_profile: dict | None = None, language: str = "") -> str:
     """Build the WhatsApp-specific system prompt."""
     profile_section = ""
     if user_profile:
@@ -70,33 +55,24 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
                 " Do NOT ask for these values if they are already set."
             )
 
-    lang_map = {
-        "de": "German",
-        "en": "English",
-        "es": "Spanish",
-        "fr": "French",
-        "it": "Italian",
-        "pt": "Portuguese",
-        "nl": "Dutch",
-    }
-
-    lang_name = lang_map.get(language or "en", language or "en")
-
     return (
         f"You are a Padel court finder assistant on WhatsApp. "
         f"Today: {datetime.now().strftime('%Y-%m-%d')}. "
-        f"Timezone: {settings.default_timezone}. Language: {lang_name}.\n\n"
+        f"Timezone: {settings.default_timezone}.\n\n"
         "GOAL: help users find and book Padel courts via WhatsApp.\n\n"
+        f"{'User language: ' + language + chr(10) if language else ''}"
         "RULES:\n"
         "1. ONLY answer about Padel courts/bookings.\n"
         "2. NEVER invent data (names, times, prices, links). Use EXACT tool outputs.\n"
-        "3. Keep responses SHORT — plain text only, no markdown.\n\n"
+        "3. Keep responses SHORT — plain text only, no markdown.\n"
+        "4. Always reply in the same language the user writes in.\n"
+        "5. On first message: detect the user's language and call"
+        " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n\n"
         "WORKFLOW:\n"
         "1. Specific club mentioned? -> `find_clubs_by_name` (use SHORT name).\n"
         "2. City/Region mentioned? -> `find_clubs_by_location`.\n"
         "3. Availability needed? -> `find_slots` (club slug + date).\n"
-        "4. Slots found (>0)? -> Call `present_slots_as_poll` with the slots list and a short question.\n"
-        "   The poll is sent separately; just confirm briefly in your text reply.\n"
+        "4. Slots found (>0)? -> List them as a numbered plain text list in your reply.\n"
         "5. No slots found? -> Tell the user and suggest a different date or time.\n\n"
         "PREFERENCES:\n"
         "- Detect new preferences (club, court, etc.) -> Call `update_user_profile` silently.\n"
@@ -107,7 +83,7 @@ def _build_system_prompt(user_profile: dict | None = None, language: str | None 
 
 
 def create_whatsapp_agent(
-    user_profile: dict | None = None, language: str | None = None
+    user_profile: dict | None = None, language: str = ""
 ) -> CompiledStateGraph:
     """Create the WhatsApp agent with optional user profile injected into the system prompt."""
     return create_agent(
@@ -139,23 +115,6 @@ def extract_final_text(result: dict) -> str:
                 if isinstance(item, dict) and item.get("type") == "text" and item.get("text"):
                     return str(item["text"])
     return ""
-
-
-def extract_poll_data(result: dict) -> dict | None:
-    """Scan tool messages for a wa_poll payload from present_slots_as_poll."""
-    messages = result.get("messages", [])
-    for m in messages:
-        if getattr(m, "tool_call_id", None) is None:
-            continue
-        content = getattr(m, "content", "")
-        try:
-            parsed = json.loads(content) if isinstance(content, str) else content
-            if isinstance(parsed, dict) and "wa_poll" in parsed:
-                poll = parsed["wa_poll"]
-                return poll if isinstance(poll, dict) else None
-        except (json.JSONDecodeError, TypeError):
-            pass
-    return None
 
 
 def extract_preference_updates(result: dict) -> dict:
