@@ -21,6 +21,12 @@ from playtomic_agent.whatsapp.storage import UserStorage
 logger = logging.getLogger(__name__)
 
 
+def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
+    """Return True if any of the bot's JIDs appear in the @mention list of the message."""
+    ctx = message.Message.extendedTextMessage.contextInfo
+    return bool(bot_jids & set(ctx.mentionedJID))
+
+
 def main() -> None:
     """Entry point for the whatsapp-agent command."""
     log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -40,7 +46,22 @@ def main() -> None:
         if message.Info.MessageSource.IsFromMe:
             return
         if message.Info.MessageSource.IsGroup:
-            return
+            if not client.me:
+                logger.info("Group message received but client.me is not set yet — ignoring")
+                return
+            bot_jids: set[str] = {f"{client.me.JID.User}@{client.me.JID.Server}"}
+            if not client.me.LID.IsEmpty:
+                bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
+            ctx = message.Message.extendedTextMessage.contextInfo
+            mentioned = list(ctx.mentionedJID)
+            logger.info(
+                "Group message — bot_jids=%s mentioned=%s has_extended=%s",
+                bot_jids,
+                mentioned,
+                message.Message.HasField("extendedTextMessage"),
+            )
+            if not _is_bot_mentioned(message, bot_jids):
+                return
 
         sender_jid = message.Info.MessageSource.Chat
         sender_id = f"{sender_jid.User}@{sender_jid.Server}"
@@ -53,7 +74,16 @@ def main() -> None:
             user_locks[sender_id] = asyncio.Lock()
 
         async with user_locks[sender_id]:
-            logger.info("Incoming message from %s", sender_id)
+            if message.Info.MessageSource.IsGroup:
+                actual_sender = message.Info.MessageSource.Sender
+                logger.info(
+                    "Incoming group message in %s from %s@%s",
+                    sender_id,
+                    actual_sender.User,
+                    actual_sender.Server,
+                )
+            else:
+                logger.info("Incoming message from %s", sender_id)
 
             user_state = storage.load(sender_id)
             messages = user_state.history + [{"role": "user", "content": user_input}]
