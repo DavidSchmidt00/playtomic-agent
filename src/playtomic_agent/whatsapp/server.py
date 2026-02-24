@@ -24,9 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
-    """Return True if any of the bot's JIDs appear in the @mention list of the message."""
+    """Return True if the bot is @mentioned or the message is a reply to the bot."""
     ctx = message.Message.extendedTextMessage.contextInfo
-    return bool(bot_jids & set(ctx.mentionedJID))
+    if bot_jids & set(ctx.mentionedJID):
+        return True
+    # Also trigger when the user replies to one of the bot's messages.
+    # In that case ctx.participant holds the JID of the quoted message's sender.
+    if ctx.participant and ctx.participant in bot_jids:
+        return True
+    return False
 
 
 def main() -> None:
@@ -46,10 +52,12 @@ def main() -> None:
     _GROUP_INTRO = (
         "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
         "Playtomic zu finden. 🎾\n\n"
-        "So funktioniert's: Erwaehnt mich mit @Erwähnung und stellt eure Frage, z.B.:\n"
-        "- Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
-        "- Suche Doppel-Courts in Berlin am Samstag\n\n"
-        "Mich gibts auch auf https://padelagent.de 🌐"
+        "So funktioniert's:\n"
+        "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
+        "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+        "* Suche Doppel-Courts in Berlin am Samstag\n"
+        "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
+        "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
     )
 
     @client.event(JoinedGroupEv)
@@ -103,9 +111,10 @@ def main() -> None:
             ctx = message.Message.extendedTextMessage.contextInfo
             mentioned = list(ctx.mentionedJID)
             logger.info(
-                "Group message — bot_jids=%s mentioned=%s has_extended=%s",
+                "Group message — bot_jids=%s mentioned=%s participant=%s has_extended=%s",
                 bot_jids,
                 mentioned,
+                ctx.participant or None,
                 message.Message.HasField("extendedTextMessage"),
             )
             if not _is_bot_mentioned(message, bot_jids):
