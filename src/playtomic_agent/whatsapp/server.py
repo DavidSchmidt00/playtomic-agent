@@ -8,12 +8,14 @@ import threading
 
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import MessageEv, event_global_loop
+from neonize.utils.enum import VoteType
 from neonize.utils.message import extract_text
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.whatsapp.agent import (
     create_whatsapp_agent,
     extract_final_text,
+    extract_poll_data,
     extract_preference_updates,
 )
 from playtomic_agent.whatsapp.storage import UserStorage
@@ -85,10 +87,13 @@ def main() -> None:
             else:
                 logger.info("Incoming message from %s", sender_id)
 
+            is_group = message.Info.MessageSource.IsGroup
             user_state = storage.load(sender_id)
             messages = user_state.history + [{"role": "user", "content": user_input}]
             agent = create_whatsapp_agent(
-                user_profile=user_state.profile, language=user_state.language
+                user_profile=user_state.profile,
+                language=user_state.language,
+                is_group=is_group,
             )
 
             try:
@@ -114,6 +119,19 @@ def main() -> None:
                 logger.info("Updated profile for %s: %s", sender_id, prefs)
             user_state.history = (messages + [{"role": "assistant", "content": final_text}])[-20:]
             storage.save(sender_id, user_state)
+
+            if is_group:
+                poll_data = extract_poll_data(result)
+                if poll_data:
+                    question = str(poll_data["question"])
+                    options: list[str] = poll_data["options"]
+                    poll_msg = await wa_client.build_poll_vote_creation(
+                        name=question,
+                        options=options,
+                        selectable_count=VoteType.SINGLE,
+                    )
+                    await wa_client.send_message(sender_jid, poll_msg)
+                    logger.info("Poll sent to group %s (%d options)", sender_id, len(options))
 
             if final_text:
                 await wa_client.send_message(sender_jid, final_text)
