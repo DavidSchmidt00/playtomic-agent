@@ -13,8 +13,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from playtomic_agent.agent import create_playtomic_agent
 from playtomic_agent.context import set_request_region
+from playtomic_agent.web.agent import create_playtomic_agent
 
 # Configure logging (use LOG_LEVEL env var, default to INFO)
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()

@@ -1,11 +1,10 @@
 from datetime import datetime
 
 from langchain.agents import create_agent
-from langchain_core.rate_limiters import InMemoryRateLimiter
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.state import CompiledStateGraph
 
 from playtomic_agent.config import get_settings
+from playtomic_agent.llm import llm
 from playtomic_agent.tools import (
     create_booking_link,
     find_clubs_by_location,
@@ -16,7 +15,6 @@ from playtomic_agent.tools import (
     update_user_profile,
 )
 
-# Load settings
 settings = get_settings()
 
 TOOLS = [
@@ -28,32 +26,6 @@ TOOLS = [
     update_user_profile,
     suggest_next_steps,
 ]
-
-
-def create_rate_limiter(requests_per_minute: int) -> InMemoryRateLimiter:
-    """Creates a rate limiter for API requests.
-
-    Args:
-        requests_per_minute: The number of requests allowed per minute.
-
-    Returns:
-        InMemoryRateLimiter: An in-memory rate limiter instance.
-    """
-    return InMemoryRateLimiter(
-        requests_per_second=requests_per_minute / 60,
-        check_every_n_seconds=0.1,
-        max_bucket_size=10,
-    )
-
-
-# Initialize language model with rate limiter
-gemini = ChatGoogleGenerativeAI(
-    # model="gemini-2.5-flash",
-    model="gemini-3-flash-preview",
-    google_api_key=settings.gemini_api_key,
-    rate_limiter=create_rate_limiter(10),
-)
-llm = gemini
 
 
 def _build_system_prompt(user_profile: dict | None = None, language: str | None = None) -> str:

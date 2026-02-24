@@ -27,12 +27,14 @@ dependencies = [
     "langgraph>=1.0.7",
     "langgraph-cli[inmem]>=0.4.12",
     "langchain-google-genai>=4.2.0",
+    "langchain-nvidia-ai-endpoints>=0.3.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
     "fastapi>=0.128.0",
     "uvicorn[standard]>=0.40.0",
     "slowapi>=0.1.9",
+    "neonize>=0.3.14",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +51,7 @@ dev = [
 
 [project.scripts]
 playtomic-agent = "playtomic_agent.client.cli:main"
+whatsapp-agent = "playtomic_agent.whatsapp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/DavidSchmidt00/playtomic-agent"
@@ -110,6 +113,10 @@ module = "langchain_google_genai.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "langchain_nvidia_ai_endpoints.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "langgraph.*"
 ignore_missing_imports = true
 
@@ -123,6 +130,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "slowapi.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "neonize.*"
 ignore_missing_imports = true
 
 # Pytest configuration

@@ -4,15 +4,24 @@
         {
             "label": "Start Backend (FastAPI)",
             "type": "shell",
-            "command": "uvicorn playtomic_agent.api:app --host 0.0.0.0 --port 8082 --reload",
+            "command": "uvicorn playtomic_agent.web.api:app --host 0.0.0.0 --port 8082 --reload",
             "isBackground": true,
             "problemMatcher": [],
             "presentation": {
-                "group": "dev-servers",
-                "panel": "shared"
-            },
-            "runOptions": {
-                "runOn": "folderOpen"
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
+            }
+        },
+        {
+            "label": "Start WhatsApp Agent",
+            "type": "shell",
+            "command": "whatsapp-agent",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
             }
         },
         {
@@ -25,11 +34,9 @@
             "isBackground": true,
             "problemMatcher": [],
             "presentation": {
-                "group": "dev-servers",
-                "panel": "shared"
-            },
-            "runOptions": {
-                "runOn": "folderOpen"
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
             }
         }
     ]
