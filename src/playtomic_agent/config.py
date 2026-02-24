@@ -37,6 +37,28 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL", description="Logging level")
 
+    # WhatsApp integration (optional — only required when running whatsapp-agent)
+    whatsapp_token: str | None = Field(
+        default=None,
+        alias="WHATSAPP_TOKEN",
+        description="Meta WhatsApp Cloud API bearer token",
+    )
+    whatsapp_phone_number_id: str | None = Field(
+        default=None,
+        alias="WHATSAPP_PHONE_NUMBER_ID",
+        description="Phone number ID from Meta Business Manager",
+    )
+    whatsapp_verify_token: str | None = Field(
+        default=None,
+        alias="WHATSAPP_VERIFY_TOKEN",
+        description="Webhook verify token (chosen by us, verified by Meta)",
+    )
+    whatsapp_storage_path: str = Field(
+        default="data/whatsapp_users.json",
+        alias="WHATSAPP_STORAGE_PATH",
+        description="Path to the JSON file storing per-user WhatsApp state",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
