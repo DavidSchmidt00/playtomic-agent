@@ -7,7 +7,7 @@ from langchain_core.tools import tool
 from langgraph.graph.state import CompiledStateGraph
 
 from playtomic_agent.config import get_settings
-from playtomic_agent.llm import gemini
+from playtomic_agent.llm import llm
 from playtomic_agent.tools import (
     create_booking_link,
     find_clubs_by_location,
@@ -116,7 +116,7 @@ def create_whatsapp_agent(
 ) -> CompiledStateGraph:
     """Create the WhatsApp agent with optional user profile injected into the system prompt."""
     return create_agent(
-        model=gemini,
+        model=llm,
         name="whatsapp_agent",
         tools=WA_TOOLS,
         system_prompt=_build_system_prompt(user_profile, language=language, is_group=is_group),

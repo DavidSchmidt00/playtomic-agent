@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,8 +18,32 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # API Key
-    gemini_api_key: str = Field(alias="GEMINI_API_KEY", description="Google Gemini API key")
+    # LLM provider selection
+    llm_provider: Literal["gemini", "nvidia"] = Field(
+        default="gemini",
+        alias="LLM_PROVIDER",
+        description="Which LLM provider to use: 'gemini' or 'nvidia'",
+    )
+    default_model: str | None = Field(
+        default=None,
+        alias="DEFAULT_MODEL",
+        description="Override the default model for the selected provider",
+    )
+
+    # Gemini
+    gemini_api_key: str | None = Field(
+        default=None, alias="GEMINI_API_KEY", description="Google Gemini API key"
+    )
+
+    # NVIDIA
+    nvidia_api_key: str | None = Field(
+        default=None, alias="NVIDIA_API_KEY", description="NVIDIA API key (nvapi-…)"
+    )
+    nvidia_base_url: str | None = Field(
+        default=None,
+        alias="NVIDIA_BASE_URL",
+        description="Base URL for a self-hosted NVIDIA NIM microservice",
+    )
 
     # Default Configuration
     default_timezone: str = Field(
@@ -57,4 +82,4 @@ def get_settings() -> Settings:
     Returns:
         Settings instance with environment variables loaded
     """
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
