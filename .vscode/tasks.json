@@ -8,11 +8,20 @@
             "isBackground": true,
             "problemMatcher": [],
             "presentation": {
-                "group": "dev-servers",
-                "panel": "shared"
-            },
-            "runOptions": {
-                "runOn": "folderOpen"
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
+            }
+        },
+        {
+            "label": "Start WhatsApp Agent",
+            "type": "shell",
+            "command": "whatsapp-agent",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
             }
         },
         {
@@ -25,11 +34,9 @@
             "isBackground": true,
             "problemMatcher": [],
             "presentation": {
-                "group": "dev-servers",
-                "panel": "shared"
-            },
-            "runOptions": {
-                "runOn": "folderOpen"
+                "reveal": "always",
+                "panel": "new",
+                "focus": true
             }
         }
     ]
