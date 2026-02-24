@@ -7,7 +7,7 @@ import sys
 import threading
 
 from neonize.aioze.client import NewAClient
-from neonize.aioze.events import GroupInfoEv, MessageEv, event_global_loop
+from neonize.aioze.events import GroupInfoEv, JoinedGroupEv, MessageEv, event_global_loop
 from neonize.utils.enum import VoteType
 from neonize.utils.message import extract_text
 
@@ -44,16 +44,38 @@ def main() -> None:
     user_locks: dict[str, asyncio.Lock] = {}
 
     _GROUP_INTRO = (
-        "Hallo! Ich bin euer Padel-Assistent und helfe dabei, freie Court-Slots auf "
-        "Playtomic zu finden.\n\n"
-        "So funktioniert's: Erwaehnt mich mit @Erwaehnung und stellt eure Frage, z.B.:\n"
+        "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
+        "Playtomic zu finden. 🎾\n\n"
+        "So funktioniert's: Erwaehnt mich mit @Erwähnung und stellt eure Frage, z.B.:\n"
         "- Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
         "- Suche Doppel-Courts in Berlin am Samstag\n\n"
-        "Ich antworte in der Sprache, in der ihr schreibt."
+        "Mich gibts auch auf https://padelagent.de 🌐"
     )
+
+    @client.event(JoinedGroupEv)
+    async def on_joined_group(wa_client: NewAClient, event: JoinedGroupEv) -> None:
+        """Fires when the bot itself joins a group (added by admin or via invite link)."""
+        group_jid = event.GroupInfo.JID
+        logger.info(
+            "JoinedGroupEv — group=%s@%s reason=%s type=%s",
+            group_jid.User,
+            group_jid.Server,
+            event.Reason,
+            event.Type,
+        )
+        await wa_client.send_message(group_jid, _GROUP_INTRO)
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
+        join_jids = [f"{j.User}@{j.Server}" for j in event.Join]
+        logger.info(
+            "GroupInfoEv — group=%s@%s join=%s leave=%s client.me=%s",
+            event.JID.User,
+            event.JID.Server,
+            join_jids,
+            [f"{j.User}@{j.Server}" for j in event.Leave],
+            f"{client.me.JID.User}@{client.me.JID.Server}" if client.me else None,
+        )
         if not client.me:
             return
         bot_jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
