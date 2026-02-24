@@ -7,7 +7,7 @@ import sys
 import threading
 
 from neonize.aioze.client import NewAClient
-from neonize.aioze.events import MessageEv, event_global_loop
+from neonize.aioze.events import GroupInfoEv, MessageEv, event_global_loop
 from neonize.utils.enum import VoteType
 from neonize.utils.message import extract_text
 
@@ -42,6 +42,30 @@ def main() -> None:
     storage = UserStorage(settings.whatsapp_storage_path)
     client = NewAClient(settings.whatsapp_session_db)
     user_locks: dict[str, asyncio.Lock] = {}
+
+    _GROUP_INTRO = (
+        "Hallo! Ich bin euer Padel-Assistent und helfe dabei, freie Court-Slots auf "
+        "Playtomic zu finden.\n\n"
+        "So funktioniert's: Erwaehnt mich mit @Erwaehnung und stellt eure Frage, z.B.:\n"
+        "- Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+        "- Suche Doppel-Courts in Berlin am Samstag\n\n"
+        "Ich antworte in der Sprache, in der ihr schreibt."
+    )
+
+    @client.event(GroupInfoEv)
+    async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
+        if not client.me:
+            return
+        bot_jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
+        if not client.me.LID.IsEmpty:
+            bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
+        for jid in event.Join:
+            if f"{jid.User}@{jid.Server}" in bot_jids:
+                logger.info(
+                    "Bot added to group %s@%s — sending intro", event.JID.User, event.JID.Server
+                )
+                await wa_client.send_message(event.JID, _GROUP_INTRO)
+                return
 
     @client.event(MessageEv)
     async def on_message(wa_client: NewAClient, message: MessageEv) -> None:
