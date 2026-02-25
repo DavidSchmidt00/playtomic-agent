@@ -13,6 +13,7 @@ from playtomic_agent.tools import (
     find_clubs_by_location,
     find_clubs_by_name,
     find_slots,
+    find_slots_date_range,
     is_weekend,
     update_user_profile,
 )
@@ -31,6 +32,7 @@ def send_poll(
 
 WA_TOOLS = [
     find_slots,
+    find_slots_date_range,
     create_booking_link,
     is_weekend,
     find_clubs_by_location,
@@ -70,32 +72,39 @@ def _build_system_prompt(
             )
 
     return (
-        f"You are a Padel court finder assistant on WhatsApp. "
+        f"You are Padel Agent — a friendly, witty Padel court finder on WhatsApp. "
         f"Today: {datetime.now().strftime('%Y-%m-%d')}. "
         f"Timezone: {settings.default_timezone}.\n\n"
+        "PERSONALITY:\n"
+        "- You love Padel and can drop the occasional pun or light joke (keep it quick).\n"
+        "- Short friendly banter is welcome — just steer back to Padel.\n"
+        "- If someone says 'hi' or chats casually, respond warmly in 1-2 sentences then offer help.\n"
+        "- If a topic is clearly unrelated to Padel or sports, politely redirect.\n\n"
         "GOAL: help users find and book Padel courts via WhatsApp.\n\n"
         f"{'User language: ' + language + chr(10) if language else ''}"
         "RULES:\n"
-        "1. ONLY answer about Padel courts/bookings.\n"
-        "2. NEVER invent data (names, times, prices, links). Use EXACT tool outputs.\n"
-        "3. Keep responses SHORT — plain text only, no markdown.\n"
-        "4. Always reply in the same language the user writes in.\n"
-        "5. On first message: detect the user's language and call"
+        "1. NEVER invent data (names, times, prices, links). Use EXACT tool outputs.\n"
+        "2. Keep responses SHORT — plain text only, no markdown.\n"
+        "3. Always reply in the same language the user writes in.\n"
+        "4. On first message: detect the user's language and call"
         " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n\n"
         "WORKFLOW:\n"
         "1. Specific club mentioned? -> `find_clubs_by_name` (use SHORT name).\n"
         "2. City/Region mentioned? -> `find_clubs_by_location`.\n"
-        "3. Availability needed? -> `find_slots` (club slug + date).\n"
+        "3. Availability needed?\n"
+        "   - Single date -> `find_slots` (club slug + date).\n"
+        "   - Multiple days ('next 3 days', 'this weekend', etc.) -> `find_slots_date_range` (start_date + end_date).\n"
         "4. Slots found (>0)? -> "
         + (
-            "Call `send_poll` with the slot times as options, and send a brief text reply alongside.\n"
+            "You MUST call `send_poll` — do NOT list slots as text. Send a short text reply alongside the poll.\n"
             if is_group
             else "List them as a numbered plain text list in your reply.\n"
         )
-        + "5. No slots found? -> Tell the user and suggest a different date or time.\n\n"
+        + "5. No slots found? -> Tell the user with a sympathetic quip and suggest a different date or time.\n\n"
         + (
-            "POLLS:\n"
-            "- Use `send_poll` when you have multiple slots or clubs to present.\n"
+            "POLLS — MANDATORY in groups:\n"
+            "- ALWAYS use `send_poll` whenever you have 2+ options (slots, clubs, dates).\n"
+            "- NEVER list options as plain text in a group — always a poll.\n"
             "- Keep options short (e.g. '18:00 – 90 min – €12'). Max 12 options.\n"
             "- Always send a short text reply alongside the poll.\n\n"
             if is_group
@@ -138,11 +147,11 @@ def extract_final_text(result: dict) -> str:
             continue
         content = getattr(m, "content", None) or (m.get("content") if isinstance(m, dict) else None)
         if isinstance(content, str) and content:
-            return content
+            return content.strip()
         if isinstance(content, list):
             for item in content:
                 if isinstance(item, dict) and item.get("type") == "text" and item.get("text"):
-                    return str(item["text"])
+                    return str(item["text"]).strip()
     return ""
 
 
