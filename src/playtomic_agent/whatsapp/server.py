@@ -8,7 +8,7 @@ import threading
 
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import GroupInfoEv, JoinedGroupEv, MessageEv, event_global_loop
-from neonize.utils.enum import VoteType
+from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text
 
 from playtomic_agent.config import get_settings
@@ -127,6 +127,16 @@ def main() -> None:
         if not user_input:
             return
 
+        try:
+            await wa_client.mark_read(
+                message.Info.ID,
+                chat=message.Info.MessageSource.Chat,
+                sender=message.Info.MessageSource.Sender,
+                receipt=ReceiptType.READ,
+            )
+        except Exception:
+            logger.debug("mark_read failed for %s (non-fatal)", sender_id)
+
         if sender_id not in user_locks:
             user_locks[sender_id] = asyncio.Lock()
 
@@ -151,6 +161,24 @@ def main() -> None:
                 is_group=is_group,
             )
 
+            async def _keep_typing(stop: asyncio.Event) -> None:
+                while not stop.is_set():
+                    try:
+                        await wa_client.send_chat_presence(
+                            sender_jid,
+                            ChatPresence.CHAT_PRESENCE_COMPOSING,
+                            ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        await asyncio.wait_for(stop.wait(), timeout=4)
+                    except TimeoutError:
+                        pass  # resend typing on next iteration
+
+            stop_typing = asyncio.Event()
+            typing_task = asyncio.get_event_loop().create_task(_keep_typing(stop_typing))
+            result = None
             try:
                 result = await asyncio.to_thread(
                     agent.invoke,
@@ -159,6 +187,23 @@ def main() -> None:
                 )
             except Exception:
                 logger.exception("Agent failed for sender %s", sender_id)
+            finally:
+                stop_typing.set()
+                typing_task.cancel()
+                try:
+                    await typing_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                try:
+                    await wa_client.send_chat_presence(
+                        sender_jid,
+                        ChatPresence.CHAT_PRESENCE_PAUSED,
+                        ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+                    )
+                except Exception:
+                    pass
+
+            if result is None:
                 await wa_client.send_message(
                     sender_jid, "Sorry, something went wrong. Please try again."
                 )
