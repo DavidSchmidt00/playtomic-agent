@@ -29,7 +29,7 @@ def find_slots(
         "Optional: The timezone to use. Must be provided if start_time or end_time is set.",
     ] = None,
     duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
-) -> Annotated[dict | None, "A summary of available slots with count and details."]:
+) -> Annotated[dict, "A summary of available slots with count and details."]:
     """Find available slots using PlaytomicClient."""
     try:
         from playtomic_agent.config import get_settings
@@ -79,7 +79,7 @@ def find_slots(
         import logging
 
         logging.exception(f"find_slots failed: {exc}")
-        return None
+        return {"count": 0, "slots": [], "error": str(exc)}
 
 
 @tool(
@@ -108,7 +108,7 @@ def find_slots_date_range(
         "Optional: The timezone to use. Must be provided if start_time or end_time is set.",
     ] = None,
     duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
-) -> Annotated[dict | None, "Aggregated slot summary grouped by date."]:
+) -> Annotated[dict, "Aggregated slot summary grouped by date."]:
     """Find available slots over a date range using PlaytomicClient."""
     import logging
     from zoneinfo import ZoneInfo
@@ -184,7 +184,7 @@ def find_slots_date_range(
         import logging as _log
 
         _log.exception("find_slots_date_range failed: %s", exc)
-        return None
+        return {"results": [], "total_count": 0, "dates_checked": 0, "error": str(exc)}
 
 
 @tool(description="Returns the link to book a slot.")
@@ -210,7 +210,7 @@ def is_weekend(date: Annotated[str, "The date to check (YYYY-MM-DD)"]):
 @tool(description="Finds clubs by location/city. Use this for 'Clubs in Berlin'.")
 def find_clubs_by_location(
     query: Annotated[str, "Search query (e.g. 'Berlin', 'Munich')"],
-) -> Annotated[list[dict] | None, "List of found clubs."]:
+) -> Annotated[list[dict], "List of found clubs."]:
     """Finds clubs near a specific location using geocoding."""
     try:
         from playtomic_agent.context import get_country
@@ -224,7 +224,7 @@ def find_clubs_by_location(
         with PlaytomicClient() as client:
             coordinates = client.geocode(query, country_code=country)
             if not coordinates:
-                return None
+                return []
 
             lat, lon = coordinates
             clubs = client.search_clubs(query, lat=lat, lon=lon)
@@ -240,13 +240,13 @@ def find_clubs_by_location(
                 for club in clubs[:5]
             ]
     except Exception:
-        return None
+        return []
 
 
 @tool(description="Finds clubs by name. Returns CLUB_SLUG needed for searching slots.")
 def find_clubs_by_name(
     name: Annotated[str, "Club name (e.g. 'Lemon Padel')"],
-) -> Annotated[list[dict] | None, "List of found clubs."]:
+) -> Annotated[list[dict], "List of found clubs."]:
     """Finds clubs matching a specific name. Retries with shorter queries if needed."""
     try:
         with PlaytomicClient() as client:
@@ -272,7 +272,7 @@ def find_clubs_by_name(
                 for club in clubs[:5]
             ]
     except Exception:
-        return None
+        return []
 
 
 @tool(
