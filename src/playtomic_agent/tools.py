@@ -1,6 +1,6 @@
 """LangChain tools for the Playtomic agent."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
 from langchain_core.tools import tool
@@ -82,6 +82,111 @@ def find_slots(
         return None
 
 
+@tool(
+    description=(
+        "Finds available slots for a club over a date range (multi-day). "
+        "Use when the user asks about 'next 3 days', 'this weekend', or any span of dates. "
+        "Accepts start_date and end_date (YYYY-MM-DD, inclusive). Max range: 7 days. "
+        "Same optional filters as find_slots. On ClubNotFoundError, use `find_clubs_by_name`."
+    )
+)
+def find_slots_date_range(
+    club_slug: Annotated[
+        str,
+        "The slug of the club (e.g. 'lemon-padel-club'). Use `find_clubs_by_name` if unsure.",
+    ],
+    start_date: Annotated[str, "First date of the range (YYYY-MM-DD, inclusive)"],
+    end_date: Annotated[str, "Last date of the range (YYYY-MM-DD, inclusive)"],
+    court_type: Annotated[
+        Literal["SINGLE", "DOUBLE"] | None,
+        "Optional: The type of court to filter by (SINGLE, DOUBLE)",
+    ] = None,
+    start_time: Annotated[str | None, "Optional: The start time to filter by (HH:MM)"] = None,
+    end_time: Annotated[str | None, "Optional: The end time to filter by (HH:MM)"] = None,
+    timezone: Annotated[
+        str | None,
+        "Optional: The timezone to use. Must be provided if start_time or end_time is set.",
+    ] = None,
+    duration: Annotated[int | None, "Optional: The duration to filter by (minutes)"] = None,
+) -> Annotated[dict | None, "Aggregated slot summary grouped by date."]:
+    """Find available slots over a date range using PlaytomicClient."""
+    import logging
+    from zoneinfo import ZoneInfo
+
+    from playtomic_agent.client.utils import create_booking_link as _make_link
+    from playtomic_agent.config import get_settings
+
+    MAX_DAYS = 7
+    SLOTS_PER_DATE = 5
+
+    try:
+        effective_tz = timezone or get_settings().default_timezone
+        tz = ZoneInfo(effective_tz)
+
+        start = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+        if end < start:
+            return {"error": "end_date must be on or after start_date"}
+
+        if (end - start).days + 1 > MAX_DAYS:
+            end = start + timedelta(days=MAX_DAYS - 1)
+
+        results = []
+        total_count = 0
+
+        with PlaytomicClient() as client:
+            current = start
+            while current <= end:
+                date_str = current.strftime("%Y-%m-%d")
+                try:
+                    slots = client.find_slots(
+                        club_slug=club_slug,
+                        date=date_str,
+                        court_type=court_type,
+                        start_time=start_time,
+                        end_time=end_time,
+                        timezone=effective_tz,
+                        duration=duration,
+                        log_slots=False,
+                    )
+                except Exception as day_exc:
+                    logging.warning("find_slots_date_range: failed for %s: %s", date_str, day_exc)
+                    slots = []
+
+                results.append(
+                    {
+                        "date": date_str,
+                        "count": len(slots),
+                        "slots": [
+                            {
+                                "local_time": s.time.astimezone(tz).strftime("%H:%M"),
+                                "court": s.court_name,
+                                "duration": s.duration,
+                                "price": s.price,
+                                "booking_link": _make_link(
+                                    s.club_id,
+                                    s.court_id,
+                                    s.time.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                                    s.duration,
+                                ),
+                            }
+                            for s in slots[:SLOTS_PER_DATE]
+                        ],
+                    }
+                )
+                total_count += len(slots)
+                current += timedelta(days=1)
+
+        return {"results": results, "total_count": total_count, "dates_checked": len(results)}
+
+    except Exception as exc:
+        import logging as _log
+
+        _log.exception("find_slots_date_range failed: %s", exc)
+        return None
+
+
 @tool(description="Returns the link to book a slot.")
 def create_booking_link(
     club_id: Annotated[str, "The club id of the slot"],
@@ -96,7 +201,10 @@ def create_booking_link(
 
 @tool(description="Returns whether a date is a weekend.")
 def is_weekend(date: Annotated[str, "The date to check (YYYY-MM-DD)"]):
-    return datetime.strptime(date, "%Y-%m-%d").weekday() >= 5
+    try:
+        return datetime.strptime(date, "%Y-%m-%d").weekday() >= 5
+    except ValueError as exc:
+        return {"error": f"Invalid date '{date}': {exc}"}
 
 
 @tool(description="Finds clubs by location/city. Use this for 'Clubs in Berlin'.")
