@@ -101,6 +101,10 @@ def main() -> None:
     async def on_message(wa_client: NewAClient, message: MessageEv) -> None:
         if message.Info.MessageSource.IsFromMe:
             return
+
+        sender_jid = message.Info.MessageSource.Chat
+        sender_id = f"{sender_jid.User}@{sender_jid.Server}"
+
         if message.Info.MessageSource.IsGroup:
             if not client.me:
                 logger.info("Group message received but client.me is not set yet — ignoring")
@@ -117,25 +121,36 @@ def main() -> None:
                 ctx.participant or None,
                 message.Message.HasField("extendedTextMessage"),
             )
-            if not _is_bot_mentioned(message, bot_jids):
+            is_directed = _is_bot_mentioned(message, bot_jids)
+            # Mark delivered (grey ticks) for every group message; only mark read
+            # (blue ticks) when the message is actually directed at the bot.
+            receipt = ReceiptType.READ if is_directed else ReceiptType.DELIVERED
+            try:
+                await wa_client.mark_read(
+                    message.Info.ID,
+                    chat=message.Info.MessageSource.Chat,
+                    sender=message.Info.MessageSource.Sender,
+                    receipt=receipt,
+                )
+            except Exception:
+                logger.debug("mark_read failed for %s (non-fatal)", sender_id)
+            if not is_directed:
                 return
-
-        sender_jid = message.Info.MessageSource.Chat
-        sender_id = f"{sender_jid.User}@{sender_jid.Server}"
+        else:
+            # DMs: always mark as read.
+            try:
+                await wa_client.mark_read(
+                    message.Info.ID,
+                    chat=message.Info.MessageSource.Chat,
+                    sender=message.Info.MessageSource.Sender,
+                    receipt=ReceiptType.READ,
+                )
+            except Exception:
+                logger.debug("mark_read failed for %s (non-fatal)", sender_id)
 
         user_input = extract_text(message.Message).strip()
         if not user_input:
             return
-
-        try:
-            await wa_client.mark_read(
-                message.Info.ID,
-                chat=message.Info.MessageSource.Chat,
-                sender=message.Info.MessageSource.Sender,
-                receipt=ReceiptType.READ,
-            )
-        except Exception:
-            logger.debug("mark_read failed for %s (non-fatal)", sender_id)
 
         if sender_id not in user_locks:
             user_locks[sender_id] = asyncio.Lock()
