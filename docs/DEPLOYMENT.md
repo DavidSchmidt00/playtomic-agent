@@ -1,66 +1,63 @@
 # Deployment Guide
 
-This guide explains how to deploy the Padel Agent to public hosting.
+This guide explains how to deploy the Padel Agent to Railway.
 
 ## Architecture
 
-We use a **Single Container** architecture for simplest hosting:
-1.  **Frontend**: Built with Vite (React) into static files.
-2.  **Backend**: Python FastAPI.
-3.  **Runtime**: The Python backend serves the API *and* the static frontend files from a single Docker container.
+- **Web Agent**: React frontend (built with Vite) + Python FastAPI backend, served from a single Docker container (`Dockerfile.prod`).
+- **WhatsApp Agent**: Python-only background worker (`Dockerfile.whatsapp`), no HTTP port, connects to WhatsApp via neonize.
 
-## Option 1: Railway (Recommended)
+Both run as separate Railway services in the same project.
 
-This is the easiest way to host. Railway will build the `Dockerfile.prod` automatically.
+---
 
-### Prerequisites
-1.  A GitHub account with this repository pushed.
-2.  A [Railway](https://railway.app/) account.
+## Web Agent
 
-### Steps
-1.  **New Project**: Go to Railway Dashboard -> "New Project" -> "Deploy from GitHub repo".
-2.  **Select Repo**: Choose `padel-agent`.
-3.  **Configure**:
-    *   Railway should auto-detect the `Dockerfile` (it might pick the dev one by default).
-    *   Go to **Settings** -> **Build** -> **Dockerfile Path**. Change it to `Dockerfile.prod`.
-    *   **Health Check Path**: Set to `/health`.
-    *   **Restart Policy**: Always.
-4.  **Variables**:
-    *   Go to **Variables**.
-    *   Add `GEMINI_API_KEY`: Paste your API key.
-    > [!WARNING]
-    > Ensure that your environment variables do NOT contain comments (lines starting with `#` are fine, but inline comments like `KEY=VALUE # comment` can cause issues in some Docker environments).
-5.  **Domain**:
-    *   Go to **Settings** -> **Networking** -> **Generate Domain** (e.g. `padel-agent-production.up.railway.app`).
-    *   Or "Custom Domain" to link `padelagent.de`.
+Railway builds `Dockerfile.prod` automatically on every push to `main`.
 
-## Option 2: Local Production Test
+### Setup
 
-You can simulate the production environment locally using Docker Compose.
+1. **New Project**: Railway Dashboard → **New Project** → **Deploy from GitHub repo** → select `padel-agent`.
+2. **Dockerfile**: Settings → Build → **Dockerfile Path**: `Dockerfile.prod`.
+3. **Health Check**: Settings → Deploy → **Health Check Path**: `/health`.
+4. **Variables**: Add `GEMINI_API_KEY` (and optionally `DEFAULT_TIMEZONE`, `GOOGLE_GENAI_USE_VERTEXAI`).
+5. **Domain**: Settings → Networking → **Generate Domain** or add a custom domain.
 
-1.  **Build and Run**:
-    ```bash
-    docker-compose -f docker-compose.prod.yml up --build
-    ```
-2.  **Access**:
-    Open [http://localhost:8080](http://localhost:8080).
-    *   The frontend should load.
-    *   Chat should work (calls `/api/chat`).
+> [!WARNING]
+> Environment variables must not contain inline comments (`KEY=VALUE # comment` breaks some Docker environments).
 
-## Option 3: VPS (Strato / Hetzner)
+---
 
-If you have a Linux VPS with Docker installed.
+## WhatsApp Agent
 
-1.  **Upload Code**: `git clone ...` or `scp`.
-2.  **Run**:
-    ```bash
-    docker-compose -f docker-compose.prod.yml up -d --build
-    ```
-3.  **SSL**: You will need a reverse proxy like Caddy or Nginx to handle HTTPS and forward to port 8080.
+The WhatsApp agent is a **background worker** (no HTTP port). It needs:
+- A persistent **Volume** for the WhatsApp session and per-user state.
+- A one-time **QR code scan** on first start to link a phone number.
 
-### Caddy Example (Caddyfile)
-```
-padelagent.de {
-    reverse_proxy localhost:8080
-}
+### Setup
+
+1. In the Railway project, click **New** → **GitHub Repo** (same repo) → **cancel** the auto-deploy immediately.
+2. Settings → Build → **Dockerfile Path**: `Dockerfile.whatsapp`.
+3. Settings → Deploy → **Networking**: leave all options off (no public domain, no port).
+4. Settings → Deploy → **Restart Policy**: Always.
+5. **Volumes** → **New Volume** → **Mount Path**: `/app/data`.
+6. **Variables**: same `GEMINI_API_KEY`, `DEFAULT_TIMEZONE`, `GOOGLE_GENAI_USE_VERTEXAI` as the web agent.
+
+### First-run QR scan
+
+1. Trigger a deploy (push a commit or **Deploy Now** in the dashboard).
+2. Open **Deploy Logs** in real time — a QR code will be printed as ASCII art.
+3. On your phone: **WhatsApp** → **Linked Devices** → **Link a device** → scan the code.
+4. The session is saved to the volume. The agent logs a successful connection.
+
+> [!TIP]
+> The QR code expires after ~60 seconds. Restart the service to get a fresh one.
+
+### Ongoing operation
+
+After the first scan, redeploys reconnect silently using the saved session — no re-scan needed.
+
+```bash
+# Tail live logs via Railway CLI
+railway logs --service whatsapp-agent
 ```
