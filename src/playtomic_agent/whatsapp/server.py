@@ -3,10 +3,18 @@
 import asyncio
 import logging
 import os
+import sys
 import threading
 
 from neonize.aioze.client import NewAClient
-from neonize.aioze.events import GroupInfoEv, JoinedGroupEv, MessageEv, event_global_loop
+from neonize.aioze.events import (
+    GroupInfoEv,
+    JoinedGroupEv,
+    LoggedOutEv,
+    MessageEv,
+    QREv,
+    event_global_loop,
+)
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text
 
@@ -54,13 +62,32 @@ def main() -> None:
             logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
             logger.info("=" * 50)
 
-    # Determine whether a saved session already exists (non-empty DB file).
-    import os as _os
+    @client.event(LoggedOutEv)
+    async def on_logged_out(wa_client: NewAClient, event: LoggedOutEv) -> None:
+        logger.error(
+            "WhatsApp session logged out (reason=%s on_connect=%s) — exiting so the process restarts",
+            event.Reason,
+            event.OnConnect,
+        )
+        sys.exit(1)
 
-    session_exists = (
-        _os.path.exists(settings.whatsapp_session_db)
-        and _os.path.getsize(settings.whatsapp_session_db) > 0
-    )
+    _pairing_triggered = False
+
+    @client.event(QREv)
+    async def on_qr(wa_client: NewAClient, event: QREv) -> None:
+        nonlocal _pairing_triggered
+        if _pairing_triggered:
+            return
+        if settings.whatsapp_phone_number:
+            _pairing_triggered = True
+            logger.info(
+                "No session found — switching to pairing code for %s…",
+                settings.whatsapp_phone_number,
+            )
+            await wa_client.disconnect()
+            await wa_client.PairPhone(settings.whatsapp_phone_number, True)
+        else:
+            logger.info("No session and no phone number configured — displaying QR code")
 
     _GROUP_INTRO = (
         "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
@@ -205,7 +232,7 @@ def main() -> None:
                         pass  # resend typing on next iteration
 
             stop_typing = asyncio.Event()
-            typing_task = asyncio.get_event_loop().create_task(_keep_typing(stop_typing))
+            typing_task = asyncio.create_task(_keep_typing(stop_typing))
             result = None
             try:
                 result = await asyncio.to_thread(
@@ -270,20 +297,7 @@ def main() -> None:
     # in a background thread before scheduling anything on it.
     threading.Thread(target=event_global_loop.run_forever, daemon=True).start()
 
-    if not session_exists and settings.whatsapp_phone_number:
-        logger.info(
-            "No session found — requesting pairing code for %s…",
-            settings.whatsapp_phone_number,
-        )
-        asyncio.run_coroutine_threadsafe(
-            client.PairPhone(settings.whatsapp_phone_number, True), event_global_loop
-        ).result()
-    else:
-        if session_exists:
-            logger.info("Restoring existing WhatsApp session…")
-        else:
-            logger.info("No WHATSAPP_PHONE_NUMBER set — starting with QR code…")
-        asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
+    asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
 
     try:
         asyncio.run_coroutine_threadsafe(client.idle(), event_global_loop).result()
