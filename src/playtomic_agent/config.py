@@ -34,15 +34,20 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(
         default=None, alias="GEMINI_API_KEY", description="Google Gemini API key"
     )
+    gemini_rpm: int = Field(
+        default=500,
+        alias="GEMINI_RPM",
+        description="Client-side rate limit for Gemini API calls (requests per minute). Free tier: 15, paid: ~1000.",
+    )
 
     # NVIDIA
     nvidia_api_key: str | None = Field(
         default=None, alias="NVIDIA_API_KEY", description="NVIDIA API key (nvapi-…)"
     )
-    nvidia_base_url: str | None = Field(
-        default=None,
-        alias="NVIDIA_BASE_URL",
-        description="Base URL for a self-hosted NVIDIA NIM microservice",
+    nvidia_rpm: int = Field(
+        default=40,
+        alias="NVIDIA_RPM",
+        description="Client-side rate limit for NVIDIA API calls (requests per minute).",
     )
 
     # Default Configuration
