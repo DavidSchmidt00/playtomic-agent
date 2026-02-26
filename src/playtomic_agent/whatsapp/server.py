@@ -31,6 +31,27 @@ from playtomic_agent.whatsapp.storage import UserStorage
 
 logger = logging.getLogger(__name__)
 
+_GROUP_INTRO = (
+    "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
+    "Playtomic zu finden. 🎾\n\n"
+    "So funktioniert's:\n"
+    "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
+    "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+    "* Suche Doppel-Courts in Berlin am Samstag\n"
+    "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
+    "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
+)
+
+
+def _get_bot_jids(client: NewAClient) -> set[str]:
+    """Return the set of JID strings the bot is known by (phone JID + LID)."""
+    if not client.me:
+        return set()
+    jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
+    if not client.me.LID.IsEmpty:
+        jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
+    return jids
+
 
 def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
     """Return True if the bot is @mentioned or the message is a reply to the bot."""
@@ -115,17 +136,6 @@ def main() -> None:
         else:
             logger.info("No session and no phone number configured — displaying QR code")
 
-    _GROUP_INTRO = (
-        "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
-        "Playtomic zu finden. 🎾\n\n"
-        "So funktioniert's:\n"
-        "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
-        "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
-        "* Suche Doppel-Courts in Berlin am Samstag\n"
-        "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
-        "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
-    )
-
     @client.event(JoinedGroupEv)
     async def on_joined_group(wa_client: NewAClient, event: JoinedGroupEv) -> None:
         """Fires when the bot itself joins a group (added by admin or via invite link)."""
@@ -160,12 +170,10 @@ def main() -> None:
         sender_id = f"{sender_jid.User}@{sender_jid.Server}"
 
         if message.Info.MessageSource.IsGroup:
-            if not client.me:
+            bot_jids = _get_bot_jids(client)
+            if not bot_jids:
                 logger.info("Group message received but client.me is not set yet — ignoring")
                 return
-            bot_jids: set[str] = {f"{client.me.JID.User}@{client.me.JID.Server}"}
-            if not client.me.LID.IsEmpty:
-                bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
             ctx = message.Message.extendedTextMessage.contextInfo
             mentioned = list(ctx.mentionedJID)
             logger.info(
