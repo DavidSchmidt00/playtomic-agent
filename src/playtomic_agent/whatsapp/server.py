@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import random
 import threading
 from collections import defaultdict
 
@@ -42,6 +43,19 @@ _GROUP_INTRO = (
     "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
     "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
 )
+
+
+def _compute_send_delay(text: str, wpm: float) -> float:
+    """Return a human-like send delay in seconds proportional to message length.
+
+    Clamps to [0.3, 3.0] seconds with +/-20% jitter. Returns 0.0 if wpm <= 0.
+    """
+    if wpm <= 0:
+        return 0.0
+    words = max(1, len(text.split()))
+    base = words / (wpm / 60.0)
+    jitter = base * random.uniform(-0.2, 0.2)
+    return max(0.3, min(3.0, base + jitter))
 
 
 def _get_bot_jids(client: NewAClient) -> set[str]:
@@ -329,6 +343,15 @@ def main() -> None:
                     logger.info("Poll sent to group %s (%d options)", sender_id, len(options))
 
             if final_text:
+                _delay = _compute_send_delay(final_text, settings.whatsapp_send_delay_wpm)
+                if _delay > 0:
+                    logger.debug(
+                        "Send delay %.2fs for %s (%d words)",
+                        _delay,
+                        sender_id,
+                        len(final_text.split()),
+                    )
+                    await asyncio.sleep(_delay)
                 await wa_client.send_message(sender_jid, final_text)
                 logger.info("Replied to %s", sender_id)
 

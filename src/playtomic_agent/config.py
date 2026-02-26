@@ -91,6 +91,14 @@ class Settings(BaseSettings):
             "Valid values: CHROME, FIREFOX, SAFARI, EDGE, DESKTOP, IOS_PHONE, ANDROID_PHONE, …"
         ),
     )
+    whatsapp_send_delay_wpm: float = Field(
+        default=400.0,
+        alias="WHATSAPP_SEND_DELAY_WPM",
+        description=(
+            "Simulated typing speed (words per minute) used to calculate the post-agent send delay. "
+            "Set to 0 to disable."
+        ),
+    )
 
 
 @lru_cache
