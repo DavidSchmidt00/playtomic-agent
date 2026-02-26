@@ -32,7 +32,7 @@ Railway builds `Dockerfile.prod` automatically on every push to `main`.
 
 The WhatsApp agent is a **background worker** (no HTTP port). It needs:
 - A persistent **Volume** for the WhatsApp session and per-user state.
-- A one-time **QR code scan** on first start to link a phone number.
+- A dedicated phone number (not your personal number).
 
 ### Setup
 
@@ -41,21 +41,25 @@ The WhatsApp agent is a **background worker** (no HTTP port). It needs:
 3. Settings → Deploy → **Networking**: leave all options off (no public domain, no port).
 4. Settings → Deploy → **Restart Policy**: Always.
 5. **Volumes** → **New Volume** → **Mount Path**: `/app/data`.
-6. **Variables**: same `GEMINI_API_KEY`, `DEFAULT_TIMEZONE`, `GOOGLE_GENAI_USE_VERTEXAI` as the web agent.
+6. **Variables**: Add the following in addition to `GEMINI_API_KEY`, `DEFAULT_TIMEZONE`, `GOOGLE_GENAI_USE_VERTEXAI`:
+   - `WHATSAPP_PHONE_NUMBER` — the phone number to link (format: `+<country code><number>`, e.g. `+491729975477`).
 
-### First-run QR scan
+### First-run pairing
 
 1. Trigger a deploy (push a commit or **Deploy Now** in the dashboard).
-2. Open **Deploy Logs** in real time — a QR code will be printed as ASCII art.
-3. On your phone: **WhatsApp** → **Linked Devices** → **Link a device** → scan the code.
-4. The session is saved to the volume. The agent logs a successful connection.
+2. Open **Deploy Logs** in real time — you will see a line like:
+   ```
+   PAIRING CODE: ABCD-1234
+   ```
+3. On your phone: **WhatsApp** → **Linked Devices** → **Link with phone number** → enter the 8-character code.
+4. The session is saved to the volume. The agent logs `WhatsApp authenticated via pairing code.`
 
 > [!TIP]
-> The QR code expires after ~60 seconds. Restart the service to get a fresh one.
+> If the code expires before you enter it, restart the service to get a new one.
 
 ### Ongoing operation
 
-After the first scan, redeploys reconnect silently using the saved session — no re-scan needed.
+After the first pairing, redeploys reconnect silently using the saved session — no re-pairing needed.
 
 ```bash
 # Tail live logs via Railway CLI

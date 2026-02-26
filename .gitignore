@@ -212,8 +212,7 @@ __marimo__/
 .langgraph_api/
 
 # Project specific
-*.env
-!.env.example
+*.env!.env.example
 example_data/example-prompts.md
 .mcp.json
 .claude/settings.local.json

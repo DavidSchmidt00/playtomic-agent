@@ -73,6 +73,11 @@ class Settings(BaseSettings):
         alias="WHATSAPP_STORAGE_PATH",
         description="Path to the JSON file storing per-user WhatsApp state",
     )
+    whatsapp_phone_number: str | None = Field(
+        default=None,
+        alias="WHATSAPP_PHONE_NUMBER",
+        description="Phone number (with country code, e.g. +49123456789) to use for pairing code login instead of QR scan",
+    )
 
 
 @lru_cache

@@ -49,6 +49,24 @@ def main() -> None:
     client = NewAClient(settings.whatsapp_session_db)
     user_locks: dict[str, asyncio.Lock] = {}
 
+    @client.event.paircode
+    async def on_paircode(wa_client: NewAClient, code: str, connected: bool) -> None:
+        if connected:
+            logger.info("WhatsApp authenticated via pairing code.")
+        else:
+            logger.info("=" * 50)
+            logger.info("PAIRING CODE: %s", code)
+            logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
+            logger.info("=" * 50)
+
+    # Determine whether a saved session already exists (non-empty DB file).
+    import os as _os
+
+    session_exists = (
+        _os.path.exists(settings.whatsapp_session_db)
+        and _os.path.getsize(settings.whatsapp_session_db) > 0
+    )
+
     _GROUP_INTRO = (
         "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
         "Playtomic zu finden. 🎾\n\n"
@@ -257,12 +275,20 @@ def main() -> None:
     # in a background thread before scheduling anything on it.
     threading.Thread(target=event_global_loop.run_forever, daemon=True).start()
 
-    logger.info("Starting WhatsApp client (scan QR code if prompted)…")
-
-    # connect() schedules the Go connection coroutine on event_global_loop and
-    # returns immediately.  idle() then awaits that task, keeping us alive until
-    # the connection drops or is cancelled.
-    asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
+    if not session_exists and settings.whatsapp_phone_number:
+        logger.info(
+            "No session found — requesting pairing code for %s…",
+            settings.whatsapp_phone_number,
+        )
+        asyncio.run_coroutine_threadsafe(
+            client.PairPhone(settings.whatsapp_phone_number, True), event_global_loop
+        ).result()
+    else:
+        if session_exists:
+            logger.info("Restoring existing WhatsApp session…")
+        else:
+            logger.info("No WHATSAPP_PHONE_NUMBER set — starting with QR code…")
+        asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
 
     try:
         asyncio.run_coroutine_threadsafe(client.idle(), event_global_loop).result()
