@@ -3,10 +3,21 @@
 import asyncio
 import logging
 import os
+import random
 import threading
+from collections import defaultdict
 
 from neonize.aioze.client import NewAClient
-from neonize.aioze.events import GroupInfoEv, JoinedGroupEv, MessageEv, event_global_loop
+from neonize.aioze.events import (
+    ConnectFailureEv,
+    GroupInfoEv,
+    JoinedGroupEv,
+    LoggedOutEv,
+    MessageEv,
+    event_global_loop,
+)
+from neonize.proto.Neonize_pb2 import ConnectFailureReason
+from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text
 
@@ -21,6 +32,40 @@ from playtomic_agent.whatsapp.agent import (
 from playtomic_agent.whatsapp.storage import UserStorage
 
 logger = logging.getLogger(__name__)
+
+_GROUP_INTRO = (
+    "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
+    "Playtomic zu finden. 🎾\n\n"
+    "So funktioniert's:\n"
+    "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
+    "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+    "* Suche Doppel-Courts in Berlin am Samstag\n"
+    "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
+    "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
+)
+
+
+def _compute_send_delay(text: str, wpm: float) -> float:
+    """Return a human-like send delay in seconds proportional to message length.
+
+    Clamps to [0.3, 3.0] seconds with +/-20% jitter. Returns 0.0 if wpm <= 0.
+    """
+    if wpm <= 0:
+        return 0.0
+    words = max(1, len(text.split()))
+    base = words / (wpm / 60.0)
+    jitter = base * random.uniform(-0.2, 0.2)
+    return max(0.3, min(3.0, base + jitter))
+
+
+def _get_bot_jids(client: NewAClient) -> set[str]:
+    """Return the set of JID strings the bot is known by (phone JID + LID)."""
+    if not client.me:
+        return set()
+    jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
+    if not client.me.LID.IsEmpty:
+        jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
+    return jids
 
 
 def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
@@ -41,8 +86,23 @@ def main() -> None:
 
     settings = get_settings()
     storage = UserStorage(settings.whatsapp_storage_path)
-    client = NewAClient(settings.whatsapp_session_db)
-    user_locks: dict[str, asyncio.Lock] = {}
+    _platform_name = settings.whatsapp_device_platform.upper()
+    _platform_int = getattr(DeviceProps, _platform_name, None)
+    if _platform_int is None:
+        logger.warning(
+            "Unknown WHATSAPP_DEVICE_PLATFORM=%r — falling back to CHROME",
+            settings.whatsapp_device_platform,
+        )
+        _platform_int = DeviceProps.CHROME
+
+    client = NewAClient(
+        settings.whatsapp_session_db,
+        props=DeviceProps(
+            os=settings.whatsapp_device_os,
+            platformType=_platform_int,
+        ),
+    )
+    user_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     @client.event.paircode
     async def on_paircode(wa_client: NewAClient, code: str, connected: bool) -> None:
@@ -54,24 +114,62 @@ def main() -> None:
             logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
             logger.info("=" * 50)
 
-    # Determine whether a saved session already exists (non-empty DB file).
-    import os as _os
+    _PERMANENT_FAILURES = {
+        ConnectFailureReason.LOGGED_OUT,
+        ConnectFailureReason.MAIN_DEVICE_GONE,
+        ConnectFailureReason.UNKNOWN_LOGOUT,
+        ConnectFailureReason.CLIENT_OUTDATED,
+        ConnectFailureReason.BAD_USER_AGENT,
+        ConnectFailureReason.TEMP_BANNED,
+    }
 
-    session_exists = (
-        _os.path.exists(settings.whatsapp_session_db)
-        and _os.path.getsize(settings.whatsapp_session_db) > 0
-    )
+    @client.event(ConnectFailureEv)
+    async def on_connect_failure(wa_client: NewAClient, event: ConnectFailureEv) -> None:
+        if event.Reason in _PERMANENT_FAILURES:
+            logger.error(
+                "WhatsApp connection permanently failed (reason=%s message=%s) — manual intervention may be required",
+                event.Reason,
+                event.Message,
+            )
+        else:
+            logger.warning(
+                "WhatsApp connection failed (reason=%s message=%s) — transient, restarting",
+                event.Reason,
+                event.Message,
+            )
+        os._exit(1)
 
-    _GROUP_INTRO = (
-        "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
-        "Playtomic zu finden. 🎾\n\n"
-        "So funktioniert's:\n"
-        "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
-        "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
-        "* Suche Doppel-Courts in Berlin am Samstag\n"
-        "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
-        "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
-    )
+    @client.event(LoggedOutEv)
+    async def on_logged_out(wa_client: NewAClient, event: LoggedOutEv) -> None:
+        logger.error(
+            "WhatsApp session logged out (reason=%s on_connect=%s) — deleting session and exiting",
+            event.Reason,
+            event.OnConnect,
+        )
+        try:
+            os.remove(settings.whatsapp_session_db)
+            logger.info("Session DB deleted — next restart will trigger re-pairing")
+        except OSError:
+            logger.warning("Could not delete session DB at %s", settings.whatsapp_session_db)
+        os._exit(1)
+
+    _pairing_triggered = False
+
+    @client.event.qr
+    async def on_qr(wa_client: NewAClient, qr_data: bytes) -> None:
+        nonlocal _pairing_triggered
+        if _pairing_triggered:
+            return
+        if not settings.whatsapp_phone_number:
+            logger.error("No WHATSAPP_PHONE_NUMBER configured — cannot pair, exiting")
+            os._exit(1)
+        _pairing_triggered = True
+        logger.info(
+            "No session found — switching to pairing code for %s…",
+            settings.whatsapp_phone_number,
+        )
+        await wa_client.disconnect()
+        await wa_client.PairPhone(settings.whatsapp_phone_number, True)
 
     @client.event(JoinedGroupEv)
     async def on_joined_group(wa_client: NewAClient, event: JoinedGroupEv) -> None:
@@ -88,27 +186,15 @@ def main() -> None:
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
-        join_jids = [f"{j.User}@{j.Server}" for j in event.Join]
+        # Logging only — intro is sent exclusively via JoinedGroupEv to avoid
+        # sending a duplicate when both events fire for the same join action.
         logger.info(
-            "GroupInfoEv — group=%s@%s join=%s leave=%s client.me=%s",
+            "GroupInfoEv — group=%s@%s join=%s leave=%s",
             event.JID.User,
             event.JID.Server,
-            join_jids,
+            [f"{j.User}@{j.Server}" for j in event.Join],
             [f"{j.User}@{j.Server}" for j in event.Leave],
-            f"{client.me.JID.User}@{client.me.JID.Server}" if client.me else None,
         )
-        if not client.me:
-            return
-        bot_jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
-        if not client.me.LID.IsEmpty:
-            bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
-        for jid in event.Join:
-            if f"{jid.User}@{jid.Server}" in bot_jids:
-                logger.info(
-                    "Bot added to group %s@%s — sending intro", event.JID.User, event.JID.Server
-                )
-                await wa_client.send_message(event.JID, _GROUP_INTRO)
-                return
 
     @client.event(MessageEv)
     async def on_message(wa_client: NewAClient, message: MessageEv) -> None:
@@ -119,12 +205,10 @@ def main() -> None:
         sender_id = f"{sender_jid.User}@{sender_jid.Server}"
 
         if message.Info.MessageSource.IsGroup:
-            if not client.me:
+            bot_jids = _get_bot_jids(client)
+            if not bot_jids:
                 logger.info("Group message received but client.me is not set yet — ignoring")
                 return
-            bot_jids: set[str] = {f"{client.me.JID.User}@{client.me.JID.Server}"}
-            if not client.me.LID.IsEmpty:
-                bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
             ctx = message.Message.extendedTextMessage.contextInfo
             mentioned = list(ctx.mentionedJID)
             logger.info(
@@ -165,9 +249,6 @@ def main() -> None:
         if not user_input:
             return
 
-        if sender_id not in user_locks:
-            user_locks[sender_id] = asyncio.Lock()
-
         async with user_locks[sender_id]:
             if message.Info.MessageSource.IsGroup:
                 actual_sender = message.Info.MessageSource.Sender
@@ -205,13 +286,37 @@ def main() -> None:
                         pass  # resend typing on next iteration
 
             stop_typing = asyncio.Event()
-            typing_task = asyncio.get_event_loop().create_task(_keep_typing(stop_typing))
+            typing_task = asyncio.create_task(_keep_typing(stop_typing))
             result = None
+            timed_out = False
             try:
-                result = await asyncio.to_thread(
-                    agent.invoke,
-                    {"messages": messages},
-                    {"recursion_limit": 30},
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        agent.invoke,
+                        {"messages": messages},
+                        {"recursion_limit": 30},
+                    ),
+                    timeout=settings.agent_timeout_seconds,
+                )
+                # Delay while the typing indicator is still active so there's
+                # no visible gap between typing stopping and the message arriving.
+                _preview = extract_final_text(result) if result is not None else ""
+                if _preview:
+                    _delay = _compute_send_delay(_preview, settings.whatsapp_send_delay_wpm)
+                    if _delay > 0:
+                        logger.debug(
+                            "Send delay %.2fs for %s (%d words)",
+                            _delay,
+                            sender_id,
+                            len(_preview.split()),
+                        )
+                        await asyncio.sleep(_delay)
+            except TimeoutError:
+                timed_out = True
+                logger.error(
+                    "Agent timed out after %ds for %s",
+                    settings.agent_timeout_seconds,
+                    sender_id,
                 )
             except Exception:
                 logger.exception("Agent failed for sender %s", sender_id)
@@ -232,9 +337,12 @@ def main() -> None:
                     pass
 
             if result is None:
-                await wa_client.send_message(
-                    sender_jid, "Sorry, something went wrong. Please try again."
+                msg = (
+                    "Der KI-Dienst antwortet gerade nicht rechtzeitig. Bitte versuche es gleich nochmal. 🙏"
+                    if timed_out
+                    else "Entschuldigung, da ist etwas schiefgelaufen. Bitte versuche es nochmal. 🙏"
                 )
+                await wa_client.send_message(sender_jid, msg)
                 return
 
             final_text = extract_final_text(result)
@@ -270,20 +378,7 @@ def main() -> None:
     # in a background thread before scheduling anything on it.
     threading.Thread(target=event_global_loop.run_forever, daemon=True).start()
 
-    if not session_exists and settings.whatsapp_phone_number:
-        logger.info(
-            "No session found — requesting pairing code for %s…",
-            settings.whatsapp_phone_number,
-        )
-        asyncio.run_coroutine_threadsafe(
-            client.PairPhone(settings.whatsapp_phone_number, True), event_global_loop
-        ).result()
-    else:
-        if session_exists:
-            logger.info("Restoring existing WhatsApp session…")
-        else:
-            logger.info("No WHATSAPP_PHONE_NUMBER set — starting with QR code…")
-        asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
+    asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
 
     try:
         asyncio.run_coroutine_threadsafe(client.idle(), event_global_loop).result()

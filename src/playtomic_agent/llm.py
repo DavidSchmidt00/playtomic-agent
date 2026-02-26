@@ -25,17 +25,15 @@ def create_llm() -> BaseChatModel:
     model = settings.default_model or _PROVIDER_DEFAULT_MODELS[settings.llm_provider]
 
     if settings.llm_provider == "nvidia":
-        kwargs: dict = {"model": model}
+        kwargs: dict = {"model": model, "rate_limiter": create_rate_limiter(settings.nvidia_rpm)}
         if settings.nvidia_api_key:
             kwargs["api_key"] = settings.nvidia_api_key
-        if settings.nvidia_base_url:
-            kwargs["base_url"] = settings.nvidia_base_url
         return ChatNVIDIA(**kwargs)
 
     return ChatGoogleGenerativeAI(
         model=model,
         google_api_key=settings.gemini_api_key,
-        rate_limiter=create_rate_limiter(10),
+        rate_limiter=create_rate_limiter(settings.gemini_rpm),
     )
 
 

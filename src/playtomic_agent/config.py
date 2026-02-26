@@ -34,15 +34,20 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(
         default=None, alias="GEMINI_API_KEY", description="Google Gemini API key"
     )
+    gemini_rpm: int = Field(
+        default=500,
+        alias="GEMINI_RPM",
+        description="Client-side rate limit for Gemini API calls (requests per minute). Free tier: 15, paid: ~1000.",
+    )
 
     # NVIDIA
     nvidia_api_key: str | None = Field(
         default=None, alias="NVIDIA_API_KEY", description="NVIDIA API key (nvapi-…)"
     )
-    nvidia_base_url: str | None = Field(
-        default=None,
-        alias="NVIDIA_BASE_URL",
-        description="Base URL for a self-hosted NVIDIA NIM microservice",
+    nvidia_rpm: int = Field(
+        default=40,
+        alias="NVIDIA_RPM",
+        description="Client-side rate limit for NVIDIA API calls (requests per minute).",
     )
 
     # Default Configuration
@@ -57,6 +62,13 @@ class Settings(BaseSettings):
         default="https://api.playtomic.io/v1",
         alias="PLAYTOMIC_API_BASE_URL",
         description="Base URL for Playtomic API",
+    )
+
+    # Agent
+    agent_timeout_seconds: int = Field(
+        default=60,
+        alias="AGENT_TIMEOUT_SECONDS",
+        description="Maximum seconds to wait for the agent to respond before giving up.",
     )
 
     # Logging
@@ -77,6 +89,27 @@ class Settings(BaseSettings):
         default=None,
         alias="WHATSAPP_PHONE_NUMBER",
         description="Phone number (with country code, e.g. +49123456789) to use for pairing code login instead of QR scan",
+    )
+    whatsapp_device_os: str = Field(
+        default="Chrome",
+        alias="WHATSAPP_DEVICE_OS",
+        description="Device OS name reported to WhatsApp (avoids the default 'Neonize' fingerprint)",
+    )
+    whatsapp_device_platform: str = Field(
+        default="CHROME",
+        alias="WHATSAPP_DEVICE_PLATFORM",
+        description=(
+            "DeviceProps.PlatformType name reported to WhatsApp. "
+            "Valid values: CHROME, FIREFOX, SAFARI, EDGE, DESKTOP, IOS_PHONE, ANDROID_PHONE, …"
+        ),
+    )
+    whatsapp_send_delay_wpm: float = Field(
+        default=400.0,
+        alias="WHATSAPP_SEND_DELAY_WPM",
+        description=(
+            "Simulated typing speed (words per minute) used to calculate the post-agent send delay. "
+            "Set to 0 to disable."
+        ),
     )
 
 
