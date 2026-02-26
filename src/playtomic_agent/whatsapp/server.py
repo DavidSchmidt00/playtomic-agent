@@ -141,27 +141,15 @@ def main() -> None:
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
-        join_jids = [f"{j.User}@{j.Server}" for j in event.Join]
+        # Logging only — intro is sent exclusively via JoinedGroupEv to avoid
+        # sending a duplicate when both events fire for the same join action.
         logger.info(
-            "GroupInfoEv — group=%s@%s join=%s leave=%s client.me=%s",
+            "GroupInfoEv — group=%s@%s join=%s leave=%s",
             event.JID.User,
             event.JID.Server,
-            join_jids,
+            [f"{j.User}@{j.Server}" for j in event.Join],
             [f"{j.User}@{j.Server}" for j in event.Leave],
-            f"{client.me.JID.User}@{client.me.JID.Server}" if client.me else None,
         )
-        if not client.me:
-            return
-        bot_jids = {f"{client.me.JID.User}@{client.me.JID.Server}"}
-        if not client.me.LID.IsEmpty:
-            bot_jids.add(f"{client.me.LID.User}@{client.me.LID.Server}")
-        for jid in event.Join:
-            if f"{jid.User}@{jid.Server}" in bot_jids:
-                logger.info(
-                    "Bot added to group %s@%s — sending intro", event.JID.User, event.JID.Server
-                )
-                await wa_client.send_message(event.JID, _GROUP_INTRO)
-                return
 
     @client.event(MessageEv)
     async def on_message(wa_client: NewAClient, message: MessageEv) -> None:
