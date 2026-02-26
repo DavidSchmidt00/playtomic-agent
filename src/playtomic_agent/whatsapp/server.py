@@ -3,11 +3,11 @@
 import asyncio
 import logging
 import os
-import sys
 import threading
 
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import (
+    ConnectFailureEv,
     GroupInfoEv,
     JoinedGroupEv,
     LoggedOutEv,
@@ -15,6 +15,7 @@ from neonize.aioze.events import (
     QREv,
     event_global_loop,
 )
+from neonize.proto.Neonize_pb2 import ConnectFailureReason
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text
 
@@ -62,6 +63,31 @@ def main() -> None:
             logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
             logger.info("=" * 50)
 
+    _PERMANENT_FAILURES = {
+        ConnectFailureReason.LOGGED_OUT,
+        ConnectFailureReason.MAIN_DEVICE_GONE,
+        ConnectFailureReason.UNKNOWN_LOGOUT,
+        ConnectFailureReason.CLIENT_OUTDATED,
+        ConnectFailureReason.BAD_USER_AGENT,
+        ConnectFailureReason.TEMP_BANNED,
+    }
+
+    @client.event(ConnectFailureEv)
+    async def on_connect_failure(wa_client: NewAClient, event: ConnectFailureEv) -> None:
+        if event.Reason in _PERMANENT_FAILURES:
+            logger.error(
+                "WhatsApp connection permanently failed (reason=%s message=%s) — manual intervention may be required",
+                event.Reason,
+                event.Message,
+            )
+        else:
+            logger.warning(
+                "WhatsApp connection failed (reason=%s message=%s) — transient, restarting",
+                event.Reason,
+                event.Message,
+            )
+        os._exit(1)
+
     @client.event(LoggedOutEv)
     async def on_logged_out(wa_client: NewAClient, event: LoggedOutEv) -> None:
         logger.error(
@@ -69,7 +95,7 @@ def main() -> None:
             event.Reason,
             event.OnConnect,
         )
-        sys.exit(1)
+        os._exit(1)
 
     _pairing_triggered = False
 
