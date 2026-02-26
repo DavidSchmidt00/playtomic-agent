@@ -64,6 +64,13 @@ class Settings(BaseSettings):
         description="Base URL for Playtomic API",
     )
 
+    # Agent
+    agent_timeout_seconds: int = Field(
+        default=60,
+        alias="AGENT_TIMEOUT_SECONDS",
+        description="Maximum seconds to wait for the agent to respond before giving up.",
+    )
+
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL", description="Logging level")
 

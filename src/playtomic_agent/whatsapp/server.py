@@ -288,11 +288,22 @@ def main() -> None:
             stop_typing = asyncio.Event()
             typing_task = asyncio.create_task(_keep_typing(stop_typing))
             result = None
+            timed_out = False
             try:
-                result = await asyncio.to_thread(
-                    agent.invoke,
-                    {"messages": messages},
-                    {"recursion_limit": 30},
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        agent.invoke,
+                        {"messages": messages},
+                        {"recursion_limit": 30},
+                    ),
+                    timeout=settings.agent_timeout_seconds,
+                )
+            except TimeoutError:
+                timed_out = True
+                logger.error(
+                    "Agent timed out after %ds for %s",
+                    settings.agent_timeout_seconds,
+                    sender_id,
                 )
             except Exception:
                 logger.exception("Agent failed for sender %s", sender_id)
@@ -313,9 +324,12 @@ def main() -> None:
                     pass
 
             if result is None:
-                await wa_client.send_message(
-                    sender_jid, "Sorry, something went wrong. Please try again."
+                msg = (
+                    "Der KI-Dienst antwortet gerade nicht rechtzeitig. Bitte versuche es gleich nochmal. 🙏"
+                    if timed_out
+                    else "Sorry, something went wrong. Please try again."
                 )
+                await wa_client.send_message(sender_jid, msg)
                 return
 
             final_text = extract_final_text(result)
