@@ -61,8 +61,8 @@ ruff check src/ tests/
 mypy src/
 
 # CLI (test tools without agent)
-playtomic-agent search --name "Lemon Padel"
-playtomic-agent slots --club-slug lemon-padel-club --date 2026-02-25 --json
+playtomic-cli search --name "Lemon Padel"
+playtomic-cli slots --club-slug lemon-padel-club --date 2026-02-25 --json
 ```
 
 ## Architecture

@@ -146,10 +146,10 @@ Find clubs by location (using geocoding) or by name.
 
 ```bash
 # Search by Location
-playtomic-agent search --location "Berlin"
+playtomic-cli search --location "Berlin"
 
 # Search by Name
-playtomic-agent search --name "Lemon Padel"
+playtomic-cli search --name "Lemon Padel"
 ```
 
 #### Find Available Slots
@@ -157,10 +157,10 @@ Find slots for a specific club.
 
 ```bash
 # Find all slots for today
-playtomic-agent slots --club-slug lemon-padel-club
+playtomic-cli slots --club-slug lemon-padel-club
 
 # Find 90-minute double court slots tomorrow
-playtomic-agent slots \
+playtomic-cli slots \
     --club-slug lemon-padel-club \
     --date 2026-02-15 \
     --court-type DOUBLE \
@@ -170,7 +170,7 @@ playtomic-agent slots \
     --timezone Europe/Berlin
 
 # Output as JSON
-playtomic-agent slots --club-slug lemon-padel-club --json
+playtomic-cli slots --club-slug lemon-padel-club --json
 ```
 
 ## 🧠 User Profile (Memory)
