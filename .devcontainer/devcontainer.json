@@ -9,7 +9,8 @@
 		"ghcr.io/devcontainers/features/node:1": {
 			"version": "22"
 		},
-		"ghcr.io/eliises/devcontainer-features/devcontainers-cli:1": {}
+		"ghcr.io/eliises/devcontainer-features/devcontainers-cli:1": {},
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
 	},
 	"forwardPorts": [
 		8080,
@@ -21,21 +22,24 @@
 		"--env-file",
 		"${localWorkspaceFolder}/.env"
 	],
+	"remoteUser": "vscode",
 	"mounts": [
-		"source=padel-agent-node-modules,target=${containerWorkspaceFolder}/web/node_modules,type=volume"
-		// "source=padel-agent-claude-home,target=/home/vscode/.claude,type=volume"
+		"source=padel-agent-node-modules,target=${containerWorkspaceFolder}/web/node_modules,type=volume",
+		"source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
+		"source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
 	],
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"Anthropic.claude-code",
 				"ms-python.python",
-					"charliermarsh.ruff",
+				"charliermarsh.ruff",
 				"dbaeumer.vscode-eslint"
 			]
 		}
 	},
 	"containerEnv": {
-		"PYTHONPATH": "$PYTHONPATH:/workspaces/padel-agent/src"
+		"PYTHONPATH": "$PYTHONPATH:/workspaces/padel-agent/src",
+		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
 	}
 }
