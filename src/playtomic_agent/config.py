@@ -78,6 +78,19 @@ class Settings(BaseSettings):
         alias="WHATSAPP_PHONE_NUMBER",
         description="Phone number (with country code, e.g. +49123456789) to use for pairing code login instead of QR scan",
     )
+    whatsapp_device_os: str = Field(
+        default="Chrome",
+        alias="WHATSAPP_DEVICE_OS",
+        description="Device OS name reported to WhatsApp (avoids the default 'Neonize' fingerprint)",
+    )
+    whatsapp_device_platform: str = Field(
+        default="CHROME",
+        alias="WHATSAPP_DEVICE_PLATFORM",
+        description=(
+            "DeviceProps.PlatformType name reported to WhatsApp. "
+            "Valid values: CHROME, FIREFOX, SAFARI, EDGE, DESKTOP, IOS_PHONE, ANDROID_PHONE, …"
+        ),
+    )
 
 
 @lru_cache

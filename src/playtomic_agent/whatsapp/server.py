@@ -16,6 +16,7 @@ from neonize.aioze.events import (
     event_global_loop,
 )
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
+from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text
 
@@ -71,7 +72,22 @@ def main() -> None:
 
     settings = get_settings()
     storage = UserStorage(settings.whatsapp_storage_path)
-    client = NewAClient(settings.whatsapp_session_db)
+    _platform_name = settings.whatsapp_device_platform.upper()
+    _platform_int = getattr(DeviceProps, _platform_name, None)
+    if _platform_int is None:
+        logger.warning(
+            "Unknown WHATSAPP_DEVICE_PLATFORM=%r — falling back to CHROME",
+            settings.whatsapp_device_platform,
+        )
+        _platform_int = DeviceProps.CHROME
+
+    client = NewAClient(
+        settings.whatsapp_session_db,
+        props=DeviceProps(
+            os=settings.whatsapp_device_os,
+            platformType=_platform_int,
+        ),
+    )
     user_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     @client.event.paircode
