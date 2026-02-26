@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import threading
+from collections import defaultdict
 
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import (
@@ -72,7 +73,7 @@ def main() -> None:
     settings = get_settings()
     storage = UserStorage(settings.whatsapp_storage_path)
     client = NewAClient(settings.whatsapp_session_db)
-    user_locks: dict[str, asyncio.Lock] = {}
+    user_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     @client.event.paircode
     async def on_paircode(wa_client: NewAClient, code: str, connected: bool) -> None:
@@ -213,9 +214,6 @@ def main() -> None:
         user_input = extract_text(message.Message).strip()
         if not user_input:
             return
-
-        if sender_id not in user_locks:
-            user_locks[sender_id] = asyncio.Lock()
 
         async with user_locks[sender_id]:
             if message.Info.MessageSource.IsGroup:
