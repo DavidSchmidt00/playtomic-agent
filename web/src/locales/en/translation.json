@@ -18,6 +18,7 @@
     },
     "tool_names": {
         "find_slots": "Looking for available courts...",
+        "find_slots_date_range": "Checking availability across multiple days...",
         "find_clubs_by_location": "Searching for clubs near you...",
         "find_clubs_by_name": "Searching for a specific club...",
         "update_user_profile": "Updating your preferences...",

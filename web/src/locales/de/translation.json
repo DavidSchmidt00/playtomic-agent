@@ -18,6 +18,7 @@
     },
     "tool_names": {
         "find_slots": "Suche nach freien Plätzen...",
+        "find_slots_date_range": "Prüfe Verfügbarkeit über mehrere Tage...",
         "find_clubs_by_location": "Suche nach Clubs in der Nähe...",
         "find_clubs_by_name": "Suche nach einem speziellen Club...",
         "update_user_profile": "Aktualisiere deine Einstellungen...",
