@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import sys
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,15 +13,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from playtomic_agent.context import set_request_region
+from playtomic_agent.log_config import setup_logging
 from playtomic_agent.web.agent import create_playtomic_agent
 
-# Configure logging (use LOG_LEVEL env var, default to INFO)
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
+setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
 app = FastAPI(title="Playtomic Agent API")
 

@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import os
-import sys
 import threading
 
 from neonize.aioze.client import NewAClient
@@ -12,6 +11,7 @@ from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, Vot
 from neonize.utils.message import extract_text
 
 from playtomic_agent.config import get_settings
+from playtomic_agent.log_config import setup_logging
 from playtomic_agent.whatsapp.agent import (
     create_whatsapp_agent,
     extract_final_text,
@@ -37,12 +37,7 @@ def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
 
 def main() -> None:
     """Entry point for the whatsapp-agent command."""
-    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(
-        level=getattr(logging, log_level, logging.INFO),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
+    setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
     settings = get_settings()
     storage = UserStorage(settings.whatsapp_storage_path)
