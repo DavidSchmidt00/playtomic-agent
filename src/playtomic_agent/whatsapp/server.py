@@ -13,7 +13,6 @@ from neonize.aioze.events import (
     JoinedGroupEv,
     LoggedOutEv,
     MessageEv,
-    QREv,
     event_global_loop,
 )
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
@@ -121,21 +120,21 @@ def main() -> None:
 
     _pairing_triggered = False
 
-    @client.event(QREv)
-    async def on_qr(wa_client: NewAClient, event: QREv) -> None:
+    @client.event.qr
+    async def on_qr(wa_client: NewAClient, qr_data: bytes) -> None:
         nonlocal _pairing_triggered
         if _pairing_triggered:
             return
-        if settings.whatsapp_phone_number:
-            _pairing_triggered = True
-            logger.info(
-                "No session found — switching to pairing code for %s…",
-                settings.whatsapp_phone_number,
-            )
-            await wa_client.disconnect()
-            await wa_client.PairPhone(settings.whatsapp_phone_number, True)
-        else:
-            logger.info("No session and no phone number configured — displaying QR code")
+        if not settings.whatsapp_phone_number:
+            logger.error("No WHATSAPP_PHONE_NUMBER configured — cannot pair, exiting")
+            os._exit(1)
+        _pairing_triggered = True
+        logger.info(
+            "No session found — switching to pairing code for %s…",
+            settings.whatsapp_phone_number,
+        )
+        await wa_client.disconnect()
+        await wa_client.PairPhone(settings.whatsapp_phone_number, True)
 
     @client.event(JoinedGroupEv)
     async def on_joined_group(wa_client: NewAClient, event: JoinedGroupEv) -> None:
