@@ -327,7 +327,7 @@ def main() -> None:
                 msg = (
                     "Der KI-Dienst antwortet gerade nicht rechtzeitig. Bitte versuche es gleich nochmal. 🙏"
                     if timed_out
-                    else "Sorry, something went wrong. Please try again."
+                    else "Entschuldigung, da ist etwas schiefgelaufen. Bitte versuche es nochmal. 🙏"
                 )
                 await wa_client.send_message(sender_jid, msg)
                 return
