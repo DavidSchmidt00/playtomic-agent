@@ -112,10 +112,15 @@ def main() -> None:
     @client.event(LoggedOutEv)
     async def on_logged_out(wa_client: NewAClient, event: LoggedOutEv) -> None:
         logger.error(
-            "WhatsApp session logged out (reason=%s on_connect=%s) — exiting so the process restarts",
+            "WhatsApp session logged out (reason=%s on_connect=%s) — deleting session and exiting",
             event.Reason,
             event.OnConnect,
         )
+        try:
+            os.remove(settings.whatsapp_session_db)
+            logger.info("Session DB deleted — next restart will trigger re-pairing")
+        except OSError:
+            logger.warning("Could not delete session DB at %s", settings.whatsapp_session_db)
         os._exit(1)
 
     _pairing_triggered = False
