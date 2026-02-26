@@ -298,6 +298,19 @@ def main() -> None:
                     ),
                     timeout=settings.agent_timeout_seconds,
                 )
+                # Delay while the typing indicator is still active so there's
+                # no visible gap between typing stopping and the message arriving.
+                _preview = extract_final_text(result) if result is not None else ""
+                if _preview:
+                    _delay = _compute_send_delay(_preview, settings.whatsapp_send_delay_wpm)
+                    if _delay > 0:
+                        logger.debug(
+                            "Send delay %.2fs for %s (%d words)",
+                            _delay,
+                            sender_id,
+                            len(_preview.split()),
+                        )
+                        await asyncio.sleep(_delay)
             except TimeoutError:
                 timed_out = True
                 logger.error(
@@ -357,15 +370,6 @@ def main() -> None:
                     logger.info("Poll sent to group %s (%d options)", sender_id, len(options))
 
             if final_text:
-                _delay = _compute_send_delay(final_text, settings.whatsapp_send_delay_wpm)
-                if _delay > 0:
-                    logger.debug(
-                        "Send delay %.2fs for %s (%d words)",
-                        _delay,
-                        sender_id,
-                        len(final_text.split()),
-                    )
-                    await asyncio.sleep(_delay)
                 await wa_client.send_message(sender_jid, final_text)
                 logger.info("Replied to %s", sender_id)
 
