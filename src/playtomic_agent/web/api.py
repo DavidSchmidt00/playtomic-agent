@@ -13,10 +13,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from playtomic_agent.context import set_request_region
-from playtomic_agent.log_config import setup_logging
 from playtomic_agent.web.agent import create_playtomic_agent
 
-setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Playtomic Agent API")
 

@@ -50,7 +50,8 @@ dev = [
 ]
 
 [project.scripts]
-playtomic-agent = "playtomic_agent.client.cli:main"
+playtomic-cli = "playtomic_agent.client.cli:main"
+web-agent = "playtomic_agent.web.server:main"
 whatsapp-agent = "playtomic_agent.whatsapp.server:main"
 
 [project.urls]
@@ -95,6 +96,10 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 exclude = ["tests"]
+
+[[tool.mypy.overrides]]
+module = "uvicorn.*"
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "bs4.*"

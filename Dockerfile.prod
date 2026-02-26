@@ -47,4 +47,4 @@ EXPOSE 8080
 # Run the application
 # We use shell form to allow variable expansion if needed, but array form is safer.
 # Hosting providers like Railway overwrite PORT. Uvicorn needs to listen on 0.0.0.0.
-CMD ["sh", "-c", "uvicorn playtomic_agent.web.api:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["web-agent"]
