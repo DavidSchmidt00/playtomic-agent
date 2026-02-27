@@ -5,7 +5,6 @@ import logging
 import os
 import random
 import threading
-import time
 from collections import defaultdict
 from typing import Any
 
@@ -16,6 +15,7 @@ from neonize.aioze.events import (
     JoinedGroupEv,
     LoggedOutEv,
     MessageEv,
+    OfflineSyncCompletedEv,
     event_global_loop,
 )
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
@@ -215,7 +215,7 @@ def main() -> None:
         ),
     )
     user_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-    startup_time = int(time.time())
+    _ready = False  # Set to True once offline sync is complete; gates on_message
 
     @client.event.paircode
     async def on_paircode(wa_client: NewAClient, code: str, connected: bool) -> None:
@@ -226,6 +226,14 @@ def main() -> None:
             logger.info("PAIRING CODE: %s", code)
             logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
             logger.info("=" * 50)
+
+    @client.event(OfflineSyncCompletedEv)
+    async def on_offline_sync_completed(
+        wa_client: NewAClient, event: OfflineSyncCompletedEv
+    ) -> None:
+        nonlocal _ready
+        _ready = True
+        logger.info("Offline sync complete — bot is now processing incoming messages")
 
     _PERMANENT_FAILURES = {
         ConnectFailureReason.LOGGED_OUT,
@@ -314,13 +322,8 @@ def main() -> None:
         if message.Info.MessageSource.IsFromMe:
             return
 
-        # Skip messages that arrived while the bot was offline (replayed on reconnect)
-        if message.Info.Timestamp < startup_time:
-            logger.debug(
-                "Skipping offline message from %s (ts=%d)",
-                message.Info.MessageSource.Chat,
-                message.Info.Timestamp,
-            )
+        # Skip messages replayed from the offline period; only process once sync is done
+        if not _ready:
             return
 
         sender_jid = message.Info.MessageSource.Chat
