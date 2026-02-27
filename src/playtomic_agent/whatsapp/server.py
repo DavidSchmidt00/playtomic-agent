@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import threading
+import time
 from collections import defaultdict
 from typing import Any
 
@@ -214,6 +215,7 @@ def main() -> None:
         ),
     )
     user_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+    startup_time = int(time.time())
 
     @client.event.paircode
     async def on_paircode(wa_client: NewAClient, code: str, connected: bool) -> None:
@@ -310,6 +312,15 @@ def main() -> None:
     @client.event(MessageEv)
     async def on_message(wa_client: NewAClient, message: MessageEv) -> None:
         if message.Info.MessageSource.IsFromMe:
+            return
+
+        # Skip messages that arrived while the bot was offline (replayed on reconnect)
+        if message.Info.Timestamp < startup_time:
+            logger.debug(
+                "Skipping offline message from %s (ts=%d)",
+                message.Info.MessageSource.Chat,
+                message.Info.Timestamp,
+            )
             return
 
         sender_jid = message.Info.MessageSource.Chat
