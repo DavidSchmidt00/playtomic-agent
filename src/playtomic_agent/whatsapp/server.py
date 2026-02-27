@@ -6,6 +6,7 @@ import os
 import random
 import threading
 from collections import defaultdict
+from typing import Any
 
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import (
@@ -19,7 +20,7 @@ from neonize.aioze.events import (
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
 from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
-from neonize.utils.message import extract_text
+from neonize.utils.message import extract_text, get_poll_update_message
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.log_config import setup_logging
@@ -78,6 +79,116 @@ def _is_bot_mentioned(message: MessageEv, bot_jids: set[str]) -> bool:
     if ctx.participant and ctx.participant in bot_jids:
         return True
     return False
+
+
+async def _handle_poll_vote(
+    wa_client: NewAClient,
+    message: MessageEv,
+    sender_jid: Any,
+    sender_id: str,
+    storage: UserStorage,
+    user_locks: defaultdict,
+) -> None:
+    """Decrypt a poll vote, update the active poll tally, and notify if threshold is reached."""
+    import hashlib
+
+    poll_update = get_poll_update_message(message)
+    if poll_update is None:
+        return
+
+    try:
+        poll_vote = await wa_client.decrypt_poll_vote(message)
+    except Exception:
+        logger.debug("decrypt_poll_vote failed for %s — skipping", sender_id)
+        return
+
+    async with user_locks[sender_id]:
+        user_state = storage.load(sender_id)
+        if not user_state.active_poll:
+            return
+
+        # Only handle votes for the current active poll
+        if poll_update.pollCreationMessageKey.ID != user_state.active_poll["message_id"]:
+            logger.debug("Vote for unknown poll in %s — ignoring", sender_id)
+            return
+
+        voter_jid = (
+            f"{message.Info.MessageSource.Sender.User}"
+            f"@{message.Info.MessageSource.Sender.Server}"
+        )
+        court_type = user_state.active_poll.get("court_type", "DOUBLE")
+        threshold = 2 if court_type == "SINGLE" else 4
+
+        changed = False
+        for option in user_state.active_poll["options"]:
+            opt_hash = hashlib.sha256(option["display"].encode()).digest()
+            for selected_bytes in poll_vote.selectedOptions:
+                if selected_bytes == opt_hash and voter_jid not in option["voters"]:
+                    option["voters"].append(voter_jid)
+                    changed = True
+
+        if not changed:
+            return
+        storage.save(sender_id, user_state)
+
+        for option in user_state.active_poll["options"]:
+            if len(option["voters"]) >= threshold:
+                logger.info(
+                    "Poll threshold reached in %s for '%s' (%d voters)",
+                    sender_id,
+                    option["display"],
+                    len(option["voters"]),
+                )
+                await _notify_booking_threshold(wa_client, sender_jid, option, threshold)
+                user_state.active_poll = None
+                storage.save(sender_id, user_state)
+                break
+
+
+async def _notify_booking_threshold(
+    wa_client: NewAClient,
+    group_jid: Any,
+    option: dict,
+    threshold: int,
+) -> None:
+    """Check slot availability and send a booking reminder to the group."""
+    from urllib.parse import parse_qs, urlparse
+
+    from playtomic_agent.client.api import PlaytomicClient
+    from playtomic_agent.models import Club
+
+    display = option["display"]
+    booking_link = option.get("booking_link", "")
+    still_available = True
+
+    if booking_link:
+        try:
+            qs = parse_qs(urlparse(booking_link).query)
+            club_id = qs["tenant_id"][0]
+            court_id = qs["resource_id"][0]
+            # Booking links URL-encode colons as %3A — decode before parsing
+            raw_start = qs["start"][0].replace("%3A", ":")
+            duration = int(qs["duration"][0])
+            date_str = raw_start[:10]  # "2026-02-27"
+            start_hhmm = raw_start[11:16]  # "17:00"
+
+            minimal_club = Club(club_id=club_id, name="", slug="", timezone="UTC", courts=[])
+            with PlaytomicClient() as client:
+                slots = client.get_available_slots(minimal_club, date_str, start_time=start_hhmm)
+            still_available = any(s.court_id == court_id and s.duration == duration for s in slots)
+        except Exception:
+            logger.debug("Availability check failed — sending reminder anyway", exc_info=True)
+
+    if still_available:
+        if booking_link:
+            text = f"🎯 {threshold} Stimmen für {display}! Jetzt buchen:\n{booking_link}"
+        else:
+            text = f"🎯 {threshold} Stimmen für {display}! Auf Playtomic buchen."
+    else:
+        text = f"⚠️ {display} ist leider nicht mehr verfügbar — wählt einen anderen Slot!"
+
+    await wa_client.send_message(group_jid, text)
+    logger.info("Booking threshold notification sent for '%s'", display)
 
 
 def main() -> None:
@@ -245,6 +356,11 @@ def main() -> None:
             except Exception:
                 logger.debug("mark_read failed for %s (non-fatal)", sender_id)
 
+        # Poll votes arrive as pollUpdateMessage — handle before text extraction
+        if message.Info.MessageSource.IsGroup and get_poll_update_message(message):
+            await _handle_poll_vote(wa_client, message, sender_jid, sender_id, storage, user_locks)
+            return
+
         user_input = extract_text(message.Message).strip()
         if not user_input:
             return
@@ -359,15 +475,36 @@ def main() -> None:
             if is_group:
                 poll_data = extract_poll_data(result)
                 if poll_data:
+                    slots_meta: list[dict] = poll_data.get("slots", [])
                     question = str(poll_data["question"])
-                    options: list[str] = poll_data["options"]
+                    court_type = str(poll_data.get("court_type", "DOUBLE"))
+                    display_options = [s.get("display", "") for s in slots_meta]
                     poll_msg = await wa_client.build_poll_vote_creation(
                         name=question,
-                        options=options,
+                        options=display_options,
                         selectable_count=VoteType.MULTIPLE,
                     )
-                    await wa_client.send_message(sender_jid, poll_msg)
-                    logger.info("Poll sent to group %s (%d options)", sender_id, len(options))
+                    send_resp = await wa_client.send_message(sender_jid, poll_msg)
+                    user_state.active_poll = {
+                        "message_id": send_resp.ID,
+                        "question": question,
+                        "court_type": court_type,
+                        "options": [
+                            {
+                                "display": s.get("display", ""),
+                                "booking_link": s.get("booking_link", ""),
+                                "voters": [],
+                            }
+                            for s in slots_meta
+                        ],
+                    }
+                    storage.save(sender_id, user_state)
+                    logger.info(
+                        "Poll sent to group %s (%d options, id=%s)",
+                        sender_id,
+                        len(display_options),
+                        send_resp.ID,
+                    )
 
             if final_text:
                 await wa_client.send_message(sender_jid, final_text)

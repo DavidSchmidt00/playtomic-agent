@@ -8,6 +8,8 @@ from langchain_core.tools import tool
 from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.utils import create_booking_link as utils_create_booking_link
 
+_DE_WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
 
 @tool(
     description="Finds available slots for club/date. Filters: court_type, start_time, duration. On ClubNotFoundError, use `find_clubs_by_name`."
@@ -61,6 +63,12 @@ def find_slots(
                 "date": date,
                 "slots": [
                     {
+                        "display": (
+                            f"{_DE_WEEKDAYS[s.time.astimezone(tz).weekday()]} | "
+                            f"{s.time.astimezone(tz).strftime('%d.%m')} | "
+                            f"{s.time.astimezone(tz).strftime('%H:%M')} | "
+                            f"{s.duration}"
+                        ),
                         "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                         "court": s.court_name,
                         "duration": s.duration,
@@ -160,6 +168,12 @@ def find_slots_date_range(
                         "count": len(slots),
                         "slots": [
                             {
+                                "display": (
+                                    f"{_DE_WEEKDAYS[s.time.astimezone(tz).weekday()]} | "
+                                    f"{s.time.astimezone(tz).strftime('%d.%m')} | "
+                                    f"{s.time.astimezone(tz).strftime('%H:%M')} | "
+                                    f"{s.duration}"
+                                ),
                                 "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                                 "court": s.court_name,
                                 "duration": s.duration,
