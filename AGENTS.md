@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Agent reference for the Playtomic Agent project. See [README.md](README.md) for general info and [.agent/](./agent/) for rules and backlog.
+Agent reference for the Playtomic Agent project. See [README.md](README.md) for general info.
 
 ## Project Structure
 
@@ -143,15 +143,14 @@ WhatsApp: stored in `UserState.profile` → `data/whatsapp_users.json`.
 
 ## Git Conventions
 
-- Branch: `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`
-- Commit: conventional commits (`feat(scope): description`)
-- See `.agent/rules/git.md` for agent-specific commit rules (emoji prefix, authorship footer)
-- Pre-commit hooks run automatically on commit (ruff + mypy)
+- **Branching**: Create a new branch per task (`feat/`, `fix/`, `refactor/`, `docs/`, `chore/`). Do not work directly on `main` unless instructed.
+- **Conventional Commits**: Always use conventional commits (e.g., `feat(scope): description`, `fix:`, `docs:`, `refactor:`).
+- **Attribution**: When the agent is the sole author of a commit:
+  - Prefix the commit title with `🤖 `.
+  - Add a `Co-Authored-By` trailer: `Co-Authored-By: Claude <noreply@anthropic.com>`.
+- Pre-commit hooks run automatically on commit (ruff + mypy).
 
-## Before Opening a PR
+## Documentation
 
-```bash
-pytest tests/ -v
-ruff format src/ tests/ && ruff check src/ tests/
-mypy src/
-```
+- **Keep it Current**: Update `README.md` and `AGENTS.md` after every major change.
+- **Completeness**: Ensure new features (Tools, CLI commands, API endpoints) are documented in the relevant sections of `AGENTS.md`.

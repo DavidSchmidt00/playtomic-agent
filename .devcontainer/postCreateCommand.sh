@@ -21,3 +21,6 @@ pre-commit install
 
 # Install Railway CLI
 curl -fsSL https://railway.app/install.sh | sudo sh
+
+# Install the skills CLI (https://skills.sh) for agent skill management
+npm install -g skills

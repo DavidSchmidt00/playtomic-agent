@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "architecture-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "67711f2580e7196ad1730ca61513783f31943fb56fa5e308373f2dfd38ee15f4"
+    },
+    "finishing-a-development-branch": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "9edba9a38684c060fdc38290f640e1dc0c37de286723ac9be73bacacf7cd6f3d"
+    },
+    "git-advanced-workflows": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "d46ca590d97215674b986dbc8d0085739032117669483bead7eba739948abbdd"
+    },
+    "requesting-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "93a837ba79c3c3f0b3e503fd9d8b54c638337d73d200c1af3bca9607264bf0e0"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
+    },
+    "writing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "8c536ae03ef3ab1fa974c0e50a65d803acddf5d4ee7cac68ab25a39b9e338611"
+    }
+  }
+}

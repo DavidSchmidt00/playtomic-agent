@@ -36,24 +36,35 @@ pip install -e ".[dev]"
 
 ## ⚙️ Configuration
 
-The application uses environment variables for configuration. Create a `.env` file based on `.env.example`:
+The application reads configuration from environment variables (or a `.env` file in the project root). Start from the provided template:
 
 ```bash
 cp .env.example .env
 ```
 
-### Required Environment Variables
+### Required variables
 
-```bash
-# Google Gemini API Keys (get from https://aistudio.google.com/)
-GEMINI_API_KEY_FREE=your_free_tier_key
-GEMINI_API_KEY_PAID=your_paid_tier_key
+| Variable | When required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | `LLM_PROVIDER=gemini` (default) | Google Gemini API key — get one at [aistudio.google.com](https://aistudio.google.com/) |
+| `NVIDIA_API_KEY` | `LLM_PROVIDER=nvidia` | NVIDIA API key (starts with `nvapi-`) |
+| `WHATSAPP_PHONE_NUMBER` | Running `whatsapp-agent` | Phone number with country code (e.g. `+491729975477`), used for pairing-code login. Without it the agent cannot pair on first run. |
 
-# Optional Configuration
-DEFAULT_TIMEZONE=Europe/Berlin
-DEFAULT_MODEL=gemini-3-flash-preview
-PLAYTOMIC_API_BASE_URL=https://api.playtomic.io/v1
-```
+### Optional variables (with defaults)
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `gemini` | LLM backend: `gemini` or `nvidia` |
+| `DEFAULT_MODEL` | `gemini-3.0-flash-preview` / `deepseek-ai/deepseek-v3.1-terminus` | Override the model for the selected provider. Provider defaults are used when unset. |
+| `DEFAULT_TIMEZONE` | `Europe/Berlin` | Timezone used when the user's timezone is unknown |
+| `PLAYTOMIC_API_BASE_URL` | `https://api.playtomic.io/v1` | Playtomic REST API base URL |
+| `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `WHATSAPP_SESSION_DB` | `data/whatsapp_session.db` | Path to the SQLite file where neonize stores the WhatsApp session |
+| `WHATSAPP_STORAGE_PATH` | `data/whatsapp_users.json` | Path to the JSON file storing per-user WhatsApp state and history |
+| `WHATSAPP_DEVICE_OS` | `Chrome` | Device OS name reported to WhatsApp (avoids the default `Neonize` fingerprint) |
+| `WHATSAPP_DEVICE_PLATFORM` | `CHROME` | `DeviceProps.PlatformType` reported to WhatsApp. Valid values: `CHROME`, `FIREFOX`, `SAFARI`, `EDGE`, `DESKTOP`, `IOS_PHONE`, `ANDROID_PHONE` |
+| `WHATSAPP_SEND_DELAY_WPM` | `400.0` | Simulated typing speed (words/minute) added before sending a reply. Set to `0` to disable. |
+
 
 ## 🚀 Usage
 

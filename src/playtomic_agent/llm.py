@@ -6,7 +6,7 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from playtomic_agent.config import get_settings
 
 _PROVIDER_DEFAULT_MODELS: dict[str, str] = {
-    "gemini": "gemini-3.0-flash-preview",
+    "gemini": "gemini-3-flash-preview",
     "nvidia": "deepseek-ai/deepseek-v3.1-terminus",
 }
 
