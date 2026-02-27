@@ -132,9 +132,17 @@ async def _handle_poll_vote(
             return
         storage.save(sender_id, user_state)
 
-        ready = [o for o in user_state.active_poll["options"] if len(o["voters"]) >= threshold]
+        # Find options that just hit threshold and haven't been notified yet.
+        # We keep the poll alive (don't clear active_poll) so other options can
+        # still accumulate votes and trigger their own notifications later.
+        ready = [
+            o
+            for o in user_state.active_poll["options"]
+            if len(o["voters"]) >= threshold and not o.get("notified")
+        ]
         if ready:
-            user_state.active_poll = None
+            for option in ready:
+                option["notified"] = True
             storage.save(sender_id, user_state)
             for option in ready:
                 logger.info(
