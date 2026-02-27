@@ -115,7 +115,8 @@ def _build_system_prompt(
             "- NEVER list slots as plain text in a group — always a poll.\n"
             "- Pass each slot dict from find_slots directly as-is (it already has 'display' and 'booking_link').\n"
             "- Set court_type='SINGLE' if the user is looking for singles courts, otherwise 'DOUBLE'.\n"
-            "- Always send a short text reply alongside the poll.\n\n"
+            "- Always send a short text reply alongside the poll AND briefly explain the voting mechanic:\n"
+            "  e.g. 'Vote for all slots that work for you — once 4 people pick the same slot, I'll send the booking link!' (adjust threshold: 2 for singles, 4 for doubles).\n\n"
             if is_group
             else ""
         )
