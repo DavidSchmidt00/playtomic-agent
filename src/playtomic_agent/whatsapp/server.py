@@ -106,11 +106,19 @@ async def _handle_poll_vote(
     async with user_locks[sender_id]:
         user_state = storage.load(sender_id)
         if not user_state.active_poll:
+            logger.info("Poll vote received for %s but no active_poll stored — ignoring", sender_id)
             return
 
         # Only handle votes for the current active poll
-        if poll_update.pollCreationMessageKey.ID != user_state.active_poll["message_id"]:
-            logger.debug("Vote for unknown poll in %s — ignoring", sender_id)
+        received_id = poll_update.pollCreationMessageKey.ID
+        stored_id = user_state.active_poll["message_id"]
+        if received_id != stored_id:
+            logger.info(
+                "Poll vote ID mismatch in %s: received=%r stored=%r — ignoring",
+                sender_id,
+                received_id,
+                stored_id,
+            )
             return
 
         voter_jid = (
@@ -120,15 +128,37 @@ async def _handle_poll_vote(
         court_type = user_state.active_poll.get("court_type", "DOUBLE")
         threshold = 2 if court_type == "SINGLE" else 4
 
+        n_selected = len(poll_vote.selectedOptions)
+        logger.info(
+            "Poll vote from %s in %s: %d option(s) selected, threshold=%d",
+            voter_jid,
+            sender_id,
+            n_selected,
+            threshold,
+        )
+
         changed = False
         for option in user_state.active_poll["options"]:
             opt_hash = hashlib.sha256(option["display"].encode()).digest()
             for selected_bytes in poll_vote.selectedOptions:
-                if selected_bytes == opt_hash and voter_jid not in option["voters"]:
+                match = selected_bytes == opt_hash
+                if not match:
+                    logger.info(
+                        "Hash mismatch for option %r: got %s expected %s",
+                        option["display"],
+                        selected_bytes.hex()
+                        if isinstance(selected_bytes, bytes)
+                        else repr(selected_bytes),
+                        opt_hash.hex(),
+                    )
+                if match and voter_jid not in option["voters"]:
                     option["voters"].append(voter_jid)
                     changed = True
 
         if not changed:
+            logger.info(
+                "Poll vote from %s changed nothing (already counted or no match)", voter_jid
+            )
             return
         storage.save(sender_id, user_state)
 
