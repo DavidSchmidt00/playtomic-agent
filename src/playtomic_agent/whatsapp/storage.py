@@ -15,6 +15,7 @@ class UserState:
     profile: dict = field(default_factory=dict)
     history: list[dict] = field(default_factory=list)
     language: str = ""  # BCP-47 code e.g. "de", "en" — empty until first detected
+    active_poll: dict | None = None  # Most recent group poll; cleared once threshold is hit
 
 
 class UserStorage:
@@ -56,6 +57,7 @@ class UserStorage:
             profile=raw.get("profile", {}),
             history=raw.get("history", []),
             language=raw.get("language", ""),
+            active_poll=raw.get("active_poll"),
         )
 
     def save(self, sender_id: str, state: UserState) -> None:
@@ -66,6 +68,7 @@ class UserStorage:
                 "profile": state.profile,
                 "history": state.history,
                 "language": state.language,
+                "active_poll": state.active_poll,
             }
             self._write_all(all_data)
         logger.debug("Saved state for sender %s", sender_id)

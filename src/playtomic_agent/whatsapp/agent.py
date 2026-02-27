@@ -21,13 +21,20 @@ from playtomic_agent.tools import (
 settings = get_settings()
 
 
-@tool(description="Present multiple options (slots, clubs, etc.) as a native WhatsApp poll.")
+@tool(description="Present slot options as a native WhatsApp poll. Only use in groups.")
 def send_poll(
-    question: Annotated[str, "Short poll question, e.g. 'Which slot works for you?'"],
-    options: Annotated[list[str], "Poll options as short strings (max 12)."],
+    question: Annotated[str, "Short poll question, e.g. 'Welcher Slot passt euch?'"],
+    slots: Annotated[
+        list[dict],
+        "List of slot dicts from find_slots. Each MUST have 'display' and 'booking_link'. Max 12.",
+    ],
+    court_type: Annotated[
+        str,
+        "'SINGLE' for 1v1 courts (threshold: 2 votes) or 'DOUBLE' for 2v2 courts (threshold: 4 votes). Default: 'DOUBLE'.",
+    ] = "DOUBLE",
 ) -> Annotated[dict, "Poll payload forwarded to WhatsApp."]:
-    """Sends a native WhatsApp poll. Use in groups when presenting multiple choices."""
-    return {"wa_poll": {"question": question, "options": options[:12]}}
+    """Sends a native WhatsApp poll. Slot display labels come pre-formatted from find_slots."""
+    return {"wa_poll": {"question": question, "slots": slots[:12], "court_type": court_type}}
 
 
 WA_TOOLS = [
@@ -84,7 +91,8 @@ def _build_system_prompt(
         f"{'User language: ' + language + chr(10) if language else ''}"
         "RULES:\n"
         "1. NEVER invent data (names, times, prices, links). Use EXACT tool outputs.\n"
-        "2. Keep responses SHORT — plain text only, no markdown.\n"
+        "2. Keep responses SHORT. Use only WhatsApp formatting: *bold*, _italic_, ~strikethrough~, "
+        "`monospace`. No markdown (no #headers, no [links](url), no tables).\n"
         "3. Always reply in the same language the user writes in.\n"
         "4. On first message: detect the user's language and call"
         " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n\n"
@@ -103,9 +111,10 @@ def _build_system_prompt(
         + "5. No slots found? -> Tell the user with a sympathetic quip and suggest a different date or time.\n\n"
         + (
             "POLLS — MANDATORY in groups:\n"
-            "- ALWAYS use `send_poll` whenever you have 2+ options (slots, clubs, dates).\n"
-            "- NEVER list options as plain text in a group — always a poll.\n"
-            "- Keep options short (e.g. '18:00 – 90 min – €12'). Max 12 options.\n"
+            "- ALWAYS use `send_poll` whenever you have 2+ slot options.\n"
+            "- NEVER list slots as plain text in a group — always a poll.\n"
+            "- Pass each slot dict from find_slots directly as-is (it already has 'display' and 'booking_link').\n"
+            "- Set court_type='SINGLE' if the user is looking for singles courts, otherwise 'DOUBLE'.\n"
             "- Always send a short text reply alongside the poll.\n\n"
             if is_group
             else ""

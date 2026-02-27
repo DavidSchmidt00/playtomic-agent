@@ -1,4 +1,4 @@
-"""Tests for WhatsApp agent helper functions and present_slots_as_poll tool."""
+"""Tests for WhatsApp agent helper functions and send_poll tool."""
 
 import json
 from unittest.mock import MagicMock
@@ -7,31 +7,38 @@ from playtomic_agent.whatsapp.agent import (
     extract_final_text,
     extract_poll_data,
     extract_preference_updates,
-    present_slots_as_poll,
+    send_poll,
 )
 
 # ---------------------------------------------------------------------------
-# present_slots_as_poll tool
+# send_poll tool
 # ---------------------------------------------------------------------------
 
+_SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90", "booking_link": "https://x"}
+_SLOT_B = {"display": "Mo | 01.03 | 19:30 | 60", "booking_link": "https://y"}
 
-def test_present_slots_as_poll_returns_wa_poll():
-    slots = [
-        {"local_time": "18:00", "duration": 90, "price": "24.00 €", "booking_link": "https://x"},
-        {"local_time": "19:30", "duration": 60, "price": "16.00 €", "booking_link": "https://y"},
-    ]
-    result = present_slots_as_poll.invoke({"slots": slots, "question": "Which slot?"})
+
+def test_send_poll_returns_wa_poll():
+    slots = [_SLOT_A, _SLOT_B]
+    result = send_poll.invoke({"question": "Welcher Slot?", "slots": slots})
     assert "wa_poll" in result
-    assert result["wa_poll"]["question"] == "Which slot?"
+    assert result["wa_poll"]["question"] == "Welcher Slot?"
     assert result["wa_poll"]["slots"] == slots
 
 
-def test_present_slots_as_poll_limits_to_12():
-    slots = [
-        {"local_time": f"{i:02d}:00", "duration": 60, "price": "€10", "booking_link": ""}
-        for i in range(15)
-    ]
-    result = present_slots_as_poll.invoke({"slots": slots, "question": "Pick?"})
+def test_send_poll_default_court_type_is_double():
+    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A]})
+    assert result["wa_poll"]["court_type"] == "DOUBLE"
+
+
+def test_send_poll_single_court_type():
+    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A], "court_type": "SINGLE"})
+    assert result["wa_poll"]["court_type"] == "SINGLE"
+
+
+def test_send_poll_limits_to_12():
+    slots = [{"display": f"Mo | 01.03 | {i:02d}:00 | 60", "booking_link": ""} for i in range(15)]
+    result = send_poll.invoke({"question": "Pick?", "slots": slots})
     assert len(result["wa_poll"]["slots"]) == 12
 
 
@@ -96,11 +103,15 @@ def _make_tool_msg(name: str, content):
 
 
 def test_extract_poll_data_finds_wa_poll():
-    poll_payload = {"wa_poll": {"question": "Which slot?", "slots": [{"local_time": "18:00"}]}}
-    result = {"messages": [_make_tool_msg("present_slots_as_poll", poll_payload)]}
+    poll_payload = {
+        "wa_poll": {"question": "Welcher Slot?", "slots": [_SLOT_A], "court_type": "DOUBLE"}
+    }
+    result = {"messages": [_make_tool_msg("send_poll", poll_payload)]}
     poll = extract_poll_data(result)
     assert poll is not None
-    assert poll["question"] == "Which slot?"
+    assert poll["question"] == "Welcher Slot?"
+    assert poll["slots"] == [_SLOT_A]
+    assert poll["court_type"] == "DOUBLE"
 
 
 def test_extract_poll_data_returns_none_when_absent():
