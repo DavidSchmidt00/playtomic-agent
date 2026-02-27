@@ -85,6 +85,11 @@ class Settings(BaseSettings):
         alias="WHATSAPP_STORAGE_PATH",
         description="Path to the JSON file storing per-user WhatsApp state",
     )
+    whatsapp_clear_storage_on_start: bool = Field(
+        default=False,
+        alias="WHATSAPP_CLEAR_STORAGE_ON_START",
+        description="If true, delete the user storage file on startup (useful for resetting state in production)",
+    )
     whatsapp_phone_number: str | None = Field(
         default=None,
         alias="WHATSAPP_PHONE_NUMBER",

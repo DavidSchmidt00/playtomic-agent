@@ -205,6 +205,15 @@ def main() -> None:
     setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
     settings = get_settings()
+    if settings.whatsapp_clear_storage_on_start:
+        try:
+            os.remove(settings.whatsapp_storage_path)
+            logger.info(
+                "Cleared user storage at %s (WHATSAPP_CLEAR_STORAGE_ON_START)",
+                settings.whatsapp_storage_path,
+            )
+        except FileNotFoundError:
+            pass
     storage = UserStorage(settings.whatsapp_storage_path)
     _platform_name = settings.whatsapp_device_platform.upper()
     _platform_int = getattr(DeviceProps, _platform_name, None)
