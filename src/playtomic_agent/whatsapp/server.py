@@ -503,6 +503,11 @@ def main() -> None:
                     question = str(poll_data["question"])
                     court_type = str(poll_data.get("court_type", "DOUBLE"))
                     display_options = [s.get("display", "") for s in slots_meta]
+                    if len(display_options) < 2:
+                        logger.warning("send_poll called with <2 options — skipping poll send")
+                        display_options = []
+                        poll_data = None
+                if poll_data:
                     poll_msg = await wa_client.build_poll_vote_creation(
                         name=question,
                         options=display_options,

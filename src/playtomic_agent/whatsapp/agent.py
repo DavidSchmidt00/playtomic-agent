@@ -34,6 +34,10 @@ def send_poll(
     ] = "DOUBLE",
 ) -> Annotated[dict, "Poll payload forwarded to WhatsApp."]:
     """Sends a native WhatsApp poll. Slot display labels come pre-formatted from find_slots."""
+    if len(slots) < 2:
+        return {
+            "error": "WhatsApp polls require at least 2 options. List the single slot as text instead."
+        }
     return {"wa_poll": {"question": question, "slots": slots[:12], "court_type": court_type}}
 
 
@@ -104,7 +108,7 @@ def _build_system_prompt(
         "   - Multiple days ('next 3 days', 'this weekend', etc.) -> `find_slots_date_range` (start_date + end_date).\n"
         "4. Slots found (>0)? -> "
         + (
-            "You MUST call `send_poll` — do NOT list slots as text. Send a short text reply alongside the poll.\n"
+            "If 2+ slots: call `send_poll` (WhatsApp requires ≥2 options). If exactly 1 slot: send it as plain text with the booking link — do NOT call `send_poll`.\n"
             if is_group
             else "List them as a numbered plain text list in your reply.\n"
         )

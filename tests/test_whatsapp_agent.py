@@ -27,13 +27,21 @@ def test_send_poll_returns_wa_poll():
 
 
 def test_send_poll_default_court_type_is_double():
-    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A]})
+    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A, _SLOT_B]})
     assert result["wa_poll"]["court_type"] == "DOUBLE"
 
 
 def test_send_poll_single_court_type():
-    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A], "court_type": "SINGLE"})
+    result = send_poll.invoke(
+        {"question": "Slot?", "slots": [_SLOT_A, _SLOT_B], "court_type": "SINGLE"}
+    )
     assert result["wa_poll"]["court_type"] == "SINGLE"
+
+
+def test_send_poll_rejects_fewer_than_2_slots():
+    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A]})
+    assert "error" in result
+    assert "wa_poll" not in result
 
 
 def test_send_poll_limits_to_12():
