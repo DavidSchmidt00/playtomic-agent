@@ -14,8 +14,8 @@ from playtomic_agent.whatsapp.agent import (
 # send_poll tool
 # ---------------------------------------------------------------------------
 
-_SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90", "booking_link": "https://x"}
-_SLOT_B = {"display": "Mo | 01.03 | 19:30 | 60", "booking_link": "https://y"}
+_SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90 min", "booking_link": "https://x"}
+_SLOT_B = {"display": "Mo | 01.03 | 19:30 | 60 min", "booking_link": "https://y"}
 
 
 def test_send_poll_returns_wa_poll():
@@ -37,7 +37,9 @@ def test_send_poll_single_court_type():
 
 
 def test_send_poll_limits_to_12():
-    slots = [{"display": f"Mo | 01.03 | {i:02d}:00 | 60", "booking_link": ""} for i in range(15)]
+    slots = [
+        {"display": f"Mo | 01.03 | {i:02d}:00 | 60 min", "booking_link": ""} for i in range(15)
+    ]
     result = send_poll.invoke({"question": "Pick?", "slots": slots})
     assert len(result["wa_poll"]["slots"]) == 12
 

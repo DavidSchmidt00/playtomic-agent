@@ -67,7 +67,7 @@ def find_slots(
                             f"{_DE_WEEKDAYS[s.time.astimezone(tz).weekday()]} | "
                             f"{s.time.astimezone(tz).strftime('%d.%m')} | "
                             f"{s.time.astimezone(tz).strftime('%H:%M')} | "
-                            f"{s.duration}"
+                            f"{s.duration} min"
                         ),
                         "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                         "court": s.court_name,
@@ -172,7 +172,7 @@ def find_slots_date_range(
                                     f"{_DE_WEEKDAYS[s.time.astimezone(tz).weekday()]} | "
                                     f"{s.time.astimezone(tz).strftime('%d.%m')} | "
                                     f"{s.time.astimezone(tz).strftime('%H:%M')} | "
-                                    f"{s.duration}"
+                                    f"{s.duration} min"
                                 ),
                                 "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                                 "court": s.court_name,
