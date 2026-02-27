@@ -364,7 +364,7 @@ def main() -> None:
                     poll_msg = await wa_client.build_poll_vote_creation(
                         name=question,
                         options=options,
-                        selectable_count=VoteType.SINGLE,
+                        selectable_count=VoteType.MULTIPLE,
                     )
                     await wa_client.send_message(sender_jid, poll_msg)
                     logger.info("Poll sent to group %s (%d options)", sender_id, len(options))
