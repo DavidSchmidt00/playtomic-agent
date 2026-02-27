@@ -76,12 +76,12 @@ class Settings(BaseSettings):
 
     # WhatsApp integration (optional — only required when running whatsapp-agent)
     whatsapp_session_db: str = Field(
-        default="data/whatsapp_session.db",
+        default="data/auth/whatsapp_session.db",
         alias="WHATSAPP_SESSION_DB",
         description="Path to the SQLite file where Neonize stores the WhatsApp session",
     )
     whatsapp_storage_path: str = Field(
-        default="data/whatsapp_users.json",
+        default="data/storage/whatsapp_users.json",
         alias="WHATSAPP_STORAGE_PATH",
         description="Path to the JSON file storing per-user WhatsApp state",
     )
