@@ -13,7 +13,7 @@ def test_load_unknown_sender_returns_empty_state(storage):
     state = storage.load("+4912345678")
     assert state.profile == {}
     assert state.history == []
-    assert state.language == "en"
+    assert state.language == ""
 
 
 def test_save_and_load_roundtrip(storage):

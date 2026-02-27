@@ -132,8 +132,11 @@ async def _handle_poll_vote(
             return
         storage.save(sender_id, user_state)
 
-        for option in user_state.active_poll["options"]:
-            if len(option["voters"]) >= threshold:
+        ready = [o for o in user_state.active_poll["options"] if len(o["voters"]) >= threshold]
+        if ready:
+            user_state.active_poll = None
+            storage.save(sender_id, user_state)
+            for option in ready:
                 logger.info(
                     "Poll threshold reached in %s for '%s' (%d voters)",
                     sender_id,
@@ -141,9 +144,6 @@ async def _handle_poll_vote(
                     len(option["voters"]),
                 )
                 await _notify_booking_threshold(wa_client, sender_jid, option, threshold)
-                user_state.active_poll = None
-                storage.save(sender_id, user_state)
-                break
 
 
 async def _notify_booking_threshold(
