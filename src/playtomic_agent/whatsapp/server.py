@@ -356,6 +356,13 @@ def main() -> None:
                 )
             except Exception:
                 logger.debug("mark_read failed for %s (non-fatal)", sender_id)
+            # Poll votes arrive as pollUpdateMessage — handle before direction check
+            if get_poll_update_message(message):
+                await _handle_poll_vote(
+                    wa_client, message, sender_jid, sender_id, storage, user_locks
+                )
+                return
+
             if not is_directed:
                 return
         else:
@@ -369,11 +376,6 @@ def main() -> None:
                 )
             except Exception:
                 logger.debug("mark_read failed for %s (non-fatal)", sender_id)
-
-        # Poll votes arrive as pollUpdateMessage — handle before text extraction
-        if message.Info.MessageSource.IsGroup and get_poll_update_message(message):
-            await _handle_poll_vote(wa_client, message, sender_jid, sender_id, storage, user_locks)
-            return
 
         user_input = extract_text(message.Message).strip()
         if not user_input:
