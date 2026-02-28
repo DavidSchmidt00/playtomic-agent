@@ -150,6 +150,36 @@ def _split_message(
     return chunks + tail
 
 
+async def _send_text(
+    wa_client: NewAClient,
+    jid: Any,
+    text: str,
+    wpm: float = 0.0,
+) -> None:
+    """Send a text message, optionally preceded by a natural typing indicator and WPM delay."""
+    if wpm > 0:
+        delay = _compute_send_delay(text, wpm)
+        if delay > 0:
+            try:
+                await wa_client.send_chat_presence(
+                    jid,
+                    ChatPresence.CHAT_PRESENCE_COMPOSING,
+                    ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+                )
+            except Exception:
+                pass
+            await asyncio.sleep(delay)
+            try:
+                await wa_client.send_chat_presence(
+                    jid,
+                    ChatPresence.CHAT_PRESENCE_PAUSED,
+                    ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+                )
+            except Exception:
+                pass
+    await wa_client.send_message(jid, text)
+
+
 def _get_bot_jids(client: NewAClient) -> set[str]:
     """Return the set of JID strings the bot is known by (phone JID + LID)."""
     if not client.me:
@@ -530,7 +560,7 @@ def main() -> None:
                 "ich kann leider nur Text verarbeiten. "
                 "Schreib mir einfach, welchen Court du suchst! 🎾"
             )
-            await wa_client.send_message(sender_jid, reply)
+            await _send_text(wa_client, sender_jid, reply, settings.whatsapp_send_delay_wpm)
             return
 
         user_input = extract_text(message.Message).strip()
@@ -700,10 +730,11 @@ def main() -> None:
                 chunks = _split_message(final_text)
                 for i, chunk in enumerate(chunks):
                     if i > 0:
-                        delay = _compute_send_delay(chunk, settings.whatsapp_send_delay_wpm)
-                        if delay > 0:
-                            await asyncio.sleep(delay)
-                    await wa_client.send_message(sender_jid, chunk)
+                        await _send_text(
+                            wa_client, sender_jid, chunk, settings.whatsapp_send_delay_wpm
+                        )
+                    else:
+                        await wa_client.send_message(sender_jid, chunk)
                 logger.info("Replied to %s (%d chunk(s))", sender_id, len(chunks))
 
     # event_global_loop is a separate asyncio loop created by neonize that runs
