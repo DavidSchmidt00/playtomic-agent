@@ -150,6 +150,32 @@ def _split_message(
     return chunks + tail
 
 
+async def _send_text(wa_client: NewAClient, jid: Any, text: str) -> None:
+    """Send a text message preceded by a natural typing indicator and WPM delay."""
+    delay = _compute_send_delay(text, get_settings().whatsapp_send_delay_wpm)
+    if delay > 0:
+        try:
+            await wa_client.send_chat_presence(
+                jid,
+                ChatPresence.CHAT_PRESENCE_COMPOSING,
+                ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+            )
+        except Exception:
+            logger.debug("Failed to send COMPOSING presence", exc_info=True)
+        try:
+            await asyncio.sleep(delay)
+        finally:
+            try:
+                await wa_client.send_chat_presence(
+                    jid,
+                    ChatPresence.CHAT_PRESENCE_PAUSED,
+                    ChatPresenceMedia.CHAT_PRESENCE_MEDIA_TEXT,
+                )
+            except Exception:
+                logger.debug("Failed to send PAUSED presence", exc_info=True)
+    await wa_client.send_message(jid, text)
+
+
 def _get_bot_jids(client: NewAClient) -> set[str]:
     """Return the set of JID strings the bot is known by (phone JID + LID)."""
     if not client.me:
@@ -323,7 +349,7 @@ async def _notify_booking_threshold(
     else:
         text = f"⚠️ {display} ist leider nicht mehr verfügbar — wählt einen anderen Slot!"
 
-    await wa_client.send_message(group_jid, text)
+    await _send_text(wa_client, group_jid, text)
     logger.info("Booking threshold notification sent for '%s'", display)
 
 
@@ -447,7 +473,7 @@ def main() -> None:
             event.Reason,
             event.Type,
         )
-        await wa_client.send_message(group_jid, _GROUP_INTRO)
+        await _send_text(wa_client, group_jid, _GROUP_INTRO)
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
@@ -530,7 +556,7 @@ def main() -> None:
                 "ich kann leider nur Text verarbeiten. "
                 "Schreib mir einfach, welchen Court du suchst! 🎾"
             )
-            await wa_client.send_message(sender_jid, reply)
+            await _send_text(wa_client, sender_jid, reply)
             return
 
         user_input = extract_text(message.Message).strip()
@@ -700,10 +726,9 @@ def main() -> None:
                 chunks = _split_message(final_text)
                 for i, chunk in enumerate(chunks):
                     if i > 0:
-                        delay = _compute_send_delay(chunk, settings.whatsapp_send_delay_wpm)
-                        if delay > 0:
-                            await asyncio.sleep(delay)
-                    await wa_client.send_message(sender_jid, chunk)
+                        await _send_text(wa_client, sender_jid, chunk)
+                    else:
+                        await wa_client.send_message(sender_jid, chunk)
                 logger.info("Replied to %s (%d chunk(s))", sender_id, len(chunks))
 
     # event_global_loop is a separate asyncio loop created by neonize that runs
