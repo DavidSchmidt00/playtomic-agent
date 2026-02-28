@@ -70,12 +70,12 @@ _MEDIA_LABELS: dict[str, str] = {
 }
 
 _MEDIA_LABELS_DE: dict[str, str] = {
-    "image": "Bild",
-    "voice note": "Sprachnachricht",
-    "video": "Video",
-    "document": "Dokument",
-    "sticker": "Sticker",
-    "location": "Standort",
+    "image": "ein Bild",
+    "voice note": "eine Sprachnachricht",
+    "video": "ein Video",
+    "document": "ein Dokument",
+    "sticker": "einen Sticker",
+    "location": "einen Standort",
 }
 
 
@@ -552,7 +552,7 @@ def main() -> None:
         if media_type:
             label_de = _MEDIA_LABELS_DE.get(media_type, media_type)
             reply = (
-                f"Ich sehe, dass du ein {label_de} geschickt hast — "
+                f"Ich sehe, dass du {label_de} geschickt hast — "
                 "ich kann leider nur Text verarbeiten. "
                 "Schreib mir einfach, welchen Court du suchst! 🎾"
             )
