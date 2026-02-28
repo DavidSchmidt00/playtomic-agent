@@ -137,24 +137,31 @@ async def _handle_poll_vote(
             threshold,
         )
 
+        opt_hash_map = {
+            hashlib.sha256(o["display"].encode()).digest(): o
+            for o in user_state.active_poll["options"]
+        }
         changed = False
-        for option in user_state.active_poll["options"]:
-            opt_hash = hashlib.sha256(option["display"].encode()).digest()
-            for selected_bytes in poll_vote.selectedOptions:
-                match = selected_bytes == opt_hash
-                if not match:
-                    logger.info(
-                        "Hash mismatch for option %r: got %s expected %s",
-                        option["display"],
-                        selected_bytes.hex()
-                        if isinstance(selected_bytes, bytes)
-                        else repr(selected_bytes),
-                        opt_hash.hex(),
-                    )
-                if match and voter_jid not in option["voters"]:
-                    option["voters"].append(voter_jid)
-                    changed = True
+        unmatched: list[str] = []
+        for selected_bytes in poll_vote.selectedOptions:
+            matched = opt_hash_map.get(selected_bytes)
+            if matched is None:
+                unmatched.append(
+                    selected_bytes.hex()
+                    if isinstance(selected_bytes, bytes)
+                    else repr(selected_bytes)
+                )
+            elif voter_jid not in matched["voters"]:
+                matched["voters"].append(voter_jid)
+                changed = True
 
+        if unmatched:
+            logger.info(
+                "Poll vote from %s: %d unrecognized hash(es) — %s",
+                voter_jid,
+                len(unmatched),
+                unmatched,
+            )
         if not changed:
             logger.info(
                 "Poll vote from %s changed nothing (already counted or no match)", voter_jid
