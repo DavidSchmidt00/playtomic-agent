@@ -60,6 +60,96 @@ def _compute_send_delay(text: str, wpm: float) -> float:
     return max(0.3, min(3.0, base + jitter))
 
 
+_MEDIA_LABELS: dict[str, str] = {
+    "imageMessage": "image",
+    "audioMessage": "voice note",
+    "videoMessage": "video",
+    "documentMessage": "document",
+    "stickerMessage": "sticker",
+    "locationMessage": "location",
+}
+
+_MEDIA_LABELS_DE: dict[str, str] = {
+    "image": "Bild",
+    "voice note": "Sprachnachricht",
+    "video": "Video",
+    "document": "Dokument",
+    "sticker": "Sticker",
+    "location": "Standort",
+}
+
+
+def _detect_media_type(msg: Any) -> str | None:
+    """Return a human-readable media label if the message is non-text media, else None."""
+    for field, label in _MEDIA_LABELS.items():
+        if getattr(msg, field).ListFields():
+            return label
+    return None
+
+
+def _prepend_quoted_context(user_input: str, quoted_text: str) -> str:
+    """Prepend quoted message context to user_input when a user replies to a message."""
+    if not quoted_text:
+        return user_input
+    excerpt = quoted_text[:300] + ("…" if len(quoted_text) > 300 else "")
+    return f'[Replying to: "{excerpt}"]\n{user_input}'
+
+
+def _split_message(
+    text: str,
+    max_chunk_chars: int = 1200,
+    booking_url_prefix: str = "https://app.playtomic.com/",
+) -> list[str]:
+    """Split a long agent response into WhatsApp-friendly chunks.
+
+    Rules:
+    - If text fits in one chunk (≤ max_chunk_chars), return [text].
+    - Split on double-newline paragraph boundaries.
+    - Any paragraph containing a booking URL is a "link paragraph".
+    - If there is exactly one link paragraph and non-link content, isolate the
+      link paragraph as the final chunk.
+    - Never split mid-sentence. If a paragraph exceeds max_chunk_chars, send
+      it as its own chunk unchanged.
+    - Consecutive non-link paragraphs are merged greedily until the next one
+      would exceed max_chunk_chars.
+    - Zero or multiple link paragraphs: no special isolation — split by length only.
+    """
+    if len(text) <= max_chunk_chars:
+        return [text]
+
+    paragraphs = text.split("\n\n")
+    link_paragraphs = [p for p in paragraphs if booking_url_prefix in p]
+    non_link_paragraphs = [p for p in paragraphs if booking_url_prefix not in p]
+
+    if len(link_paragraphs) == 1 and non_link_paragraphs:
+        work_paragraphs = non_link_paragraphs
+        tail = [link_paragraphs[0]]
+    else:
+        # Zero or multiple link paragraphs: no special isolation — split by length only.
+        # Multiple booking links in one response is not expected in normal agent output.
+        work_paragraphs = paragraphs
+        tail = []
+
+    chunks: list[str] = []
+    current_parts: list[str] = []
+    current_len = 0
+
+    for para in work_paragraphs:
+        addition_len = (2 if current_parts else 0) + len(para)  # 2 for "\n\n" separator
+        if current_parts and current_len + addition_len > max_chunk_chars:
+            chunks.append("\n\n".join(current_parts))
+            current_parts = [para]
+            current_len = len(para)
+        else:
+            current_parts.append(para)
+            current_len += addition_len
+
+    if current_parts:
+        chunks.append("\n\n".join(current_parts))
+
+    return chunks + tail
+
+
 def _get_bot_jids(client: NewAClient) -> set[str]:
     """Return the set of JID strings the bot is known by (phone JID + LID)."""
     if not client.me:
@@ -431,9 +521,34 @@ def main() -> None:
             except Exception:
                 logger.debug("mark_read failed for %s (non-fatal)", sender_id)
 
+        # Detect non-text media — send friendly reply, skip agent
+        media_type = _detect_media_type(message.Message)
+        if media_type:
+            label_de = _MEDIA_LABELS_DE.get(media_type, media_type)
+            reply = (
+                f"Ich sehe, dass du ein {label_de} geschickt hast — "
+                "ich kann leider nur Text verarbeiten. "
+                "Schreib mir einfach, welchen Court du suchst! 🎾"
+            )
+            await wa_client.send_message(sender_jid, reply)
+            return
+
         user_input = extract_text(message.Message).strip()
         if not user_input:
             return
+
+        # Enrich user_input with quoted context when user replies to a message.
+        # Skip if the quoted message was sent by the bot itself (it's already in history).
+        try:
+            ctx = message.Message.extendedTextMessage.contextInfo
+            bot_jids = _get_bot_jids(client)
+            if ctx.participant not in bot_jids:
+                quoted_raw = extract_text(ctx.quotedMessage).strip()
+            else:
+                quoted_raw = ""
+        except Exception:
+            quoted_raw = ""
+        user_input = _prepend_quoted_context(user_input, quoted_raw)
 
         async with user_locks[sender_id]:
             if message.Info.MessageSource.IsGroup:
@@ -582,8 +697,14 @@ def main() -> None:
                     )
 
             if final_text:
-                await wa_client.send_message(sender_jid, final_text)
-                logger.info("Replied to %s", sender_id)
+                chunks = _split_message(final_text)
+                for i, chunk in enumerate(chunks):
+                    if i > 0:
+                        delay = _compute_send_delay(chunk, settings.whatsapp_send_delay_wpm)
+                        if delay > 0:
+                            await asyncio.sleep(delay)
+                    await wa_client.send_message(sender_jid, chunk)
+                logger.info("Replied to %s (%d chunk(s))", sender_id, len(chunks))
 
     # event_global_loop is a separate asyncio loop created by neonize that runs
     # the connection task and dispatches async event handlers.  We must start it
