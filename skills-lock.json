@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "67711f2580e7196ad1730ca61513783f31943fb56fa5e308373f2dfd38ee15f4"
     },
+    "feature-prioritization-assistant": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "fbdbc2e299903bc47b6c1f3cc463a5e4ab54adf1a9ab601d41123a7e834272d9"
+    },
     "finishing-a-development-branch": {
       "source": "obra/superpowers",
       "sourceType": "github",
@@ -16,15 +21,55 @@
       "sourceType": "github",
       "computedHash": "d46ca590d97215674b986dbc8d0085739032117669483bead7eba739948abbdd"
     },
+    "growth-loops": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "f23b97dccaa49298d191bd2f646343e1e703bbf2983b8bd62b34594730b47be3"
+    },
+    "jobs-to-be-done": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "ebd346a3a61d48b2486d46e169f224858c7eb139d93773bcb3fc0b5d3854572d"
+    },
+    "monetizing-innovation": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "568b4ec5981497db9c9147408299fba43b7a15b4e35ab2ea4fcddc2a450e7fda"
+    },
+    "okrs": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "df94369f75a19404d52a1bc4a32a382f604201a24646a4a80344278615a9cd42"
+    },
+    "pmf-survey": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "04ba3745ed1672e800886e281bdbe3d8a34c12d5d40f798cb52523e361733b59"
+    },
     "requesting-code-review": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "computedHash": "93a837ba79c3c3f0b3e503fd9d8b54c638337d73d200c1af3bca9607264bf0e0"
     },
+    "stakeholder-update-generator": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "1c3a81b0153a3eea0986286bac9fc3cbd22bc8e203e911b315520670364b33ac"
+    },
     "test-driven-development": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
+    },
+    "thinking-in-bets": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "e9b4505f3efd9d13c3682d714a4b80d4c91d0175eb5eeef5931357ae9b48b139"
+    },
+    "working-backwards": {
+      "source": "pmprompt/claude-plugin-product-management",
+      "sourceType": "github",
+      "computedHash": "ef120a37238102ab4eacbd845a89f7a29cefcf28401b787fbae88ef05e142f37"
     },
     "writing-plans": {
       "source": "obra/superpowers",
