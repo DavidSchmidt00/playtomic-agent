@@ -22,5 +22,5 @@ pre-commit install
 # Install Railway CLI
 curl -fsSL https://railway.app/install.sh | sudo sh
 
-# Install the skills CLI (https://skills.sh) for agent skill management
-npm install -g skills
+# Install global npm tools
+npm install -g skills @anthropic-ai/claude-code
