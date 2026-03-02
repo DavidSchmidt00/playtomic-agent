@@ -17,7 +17,7 @@ case "$PROMPT_LOWER" in
     echo "💡 Skill tip: /test-driven-development — write the test first" ;;
   *"plan"*|*"spec"*|*"requirement"*)
     echo "💡 Skill tip: /writing-plans — plan before touching code" ;;
-  *"review"*|*"pull request"*|" *pr #"*)
+  *"review"*|*"pull request"*|*"pr #"*)
     echo "💡 Skill tip: /requesting-code-review — verify work before merging" ;;
   *"done"*|*"finish"*|*"complete"*|*"ship"*)
     echo "💡 Skill tip: /finishing-a-development-branch — structured completion options" ;;

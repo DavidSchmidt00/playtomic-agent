@@ -14,7 +14,6 @@
       "Bash(ruff format:*)",
       "Bash(python -c \":*)",
       "mcp__github__list_pull_requests",
-      "mcp__github__merge_pull_request",
       "mcp__railway-mcp-server__list-projects",
       "mcp__railway-mcp-server__list-services",
       "mcp__railway-mcp-server__list-variables",
@@ -38,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /workspaces/padel-agent/.claude/hooks/pre-tool-use/ruff-gate.sh"
+            "command": "bash .claude/hooks/pre-tool-use/ruff-gate.sh"
           }
         ]
       }
@@ -49,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /workspaces/padel-agent/.claude/hooks/notification/skill-suggester.sh"
+            "command": "bash .claude/hooks/notification/skill-suggester.sh"
           }
         ]
       }
@@ -60,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /workspaces/padel-agent/.claude/hooks/user-prompt-submit/skill-activation-prompt.sh"
+            "command": "bash .claude/hooks/user-prompt-submit/skill-activation-prompt.sh"
           }
         ]
       }
@@ -71,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /workspaces/padel-agent/.claude/hooks/post-tool-use/post-tool-use-tracker.sh"
+            "command": "bash .claude/hooks/post-tool-use/post-tool-use-tracker.sh"
           }
         ]
       }

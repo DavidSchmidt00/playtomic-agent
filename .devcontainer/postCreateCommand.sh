@@ -23,4 +23,4 @@ pre-commit install
 curl -fsSL https://railway.app/install.sh | sudo sh
 
 # Install global npm tools
-npm install -g skills @anthropic-ai/claude-code
+npm install -g skills @anthropic-ai/claude-code@^1
