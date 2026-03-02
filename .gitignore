@@ -216,6 +216,7 @@ __marimo__/
 example_data/example-prompts.md
 .mcp.json
 .claude/settings.local.json
+.claude/agent-memory/
 
 # Node / Frontend
 node_modules/

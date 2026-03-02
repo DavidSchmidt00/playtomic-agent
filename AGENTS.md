@@ -2,6 +2,20 @@
 
 Agent reference for the Playtomic Agent project. See [README.md](README.md) for general info.
 
+## Planning & Roadmap
+
+Before starting any task, read in order:
+
+1. [docs/product/ROADMAP.md](docs/product/ROADMAP.md) — what to build now / next / later
+2. [docs/product/BACKLOG.md](docs/product/BACKLOG.md) — detailed items with acceptance criteria
+3. `docs/tech/AGENT_TASK_<ID>.md` — per-task implementation spec (when one exists)
+
+Product context (why we build what we build):
+- [docs/product/STRATEGY.md](docs/product/STRATEGY.md)
+- [docs/product/PRODUCT.md](docs/product/PRODUCT.md)
+
+---
+
 ## Project Structure
 
 ```
@@ -23,7 +37,7 @@ src/playtomic_agent/
     ├── cli.py          # playtomic-agent CLI (search / slots)
     ├── utils.py        # geocoding, booking link helpers
     └── exceptions.py   # ClubNotFoundError, SlotNotFoundError, APIError, …
-web/                    # React 18 + Vite frontend (port 8080)
+web/                    # React 18 + Vite frontend (port 8080, port 5001 = LangGraph Studio / debug server)
 data/                   # Runtime data (gitignored)
   whatsapp_session.db   # neonize SQLite session (auto-created)
   whatsapp_users.json   # per-user WhatsApp state (auto-created)
@@ -147,7 +161,7 @@ WhatsApp: stored in `UserState.profile` → `data/whatsapp_users.json`.
 - **Conventional Commits**: Always use conventional commits (e.g., `feat(scope): description`, `fix:`, `docs:`, `refactor:`).
 - **Attribution**: When the agent is the sole author of a commit:
   - Prefix the commit title with `🤖 `.
-  - Add a `Co-Authored-By` trailer: `Co-Authored-By: Claude <noreply@anthropic.com>`.
+  - Add a `Co-Authored-By` trailer: `Co-Authored-By: AI Agent <noreply@agent>`.
 - Pre-commit hooks run automatically on commit (ruff + mypy).
 
 ## Documentation
