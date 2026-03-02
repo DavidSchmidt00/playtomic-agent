@@ -46,6 +46,7 @@ dev = [
     "responses>=0.25.8",
     "ruff>=0.15.0",
     "mypy>=1.19.1",
+    "types-requests>=2.31.0",
     "pre-commit>=4.5.1",
 ]
 
@@ -140,6 +141,12 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "neonize.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# slowapi's handler signature (Request, RateLimitExceeded) is narrower than
+# FastAPI's expected (Request, Exception); suppress env-dependent false positives.
+module = "playtomic_agent.web.api"
+warn_unused_ignores = false
 
 # Pytest configuration
 [tool.pytest.ini_options]
