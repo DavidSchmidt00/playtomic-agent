@@ -1,11 +1,12 @@
-"""Tests for message handling helper functions in server.py."""
+"""Tests for message handling helper functions in server.py and agent.py."""
 
+import json
 from unittest.mock import MagicMock
 
+from playtomic_agent.whatsapp.agent import extract_message_parts
 from playtomic_agent.whatsapp.server import (
     _detect_media_type,
     _prepend_quoted_context,
-    _split_message,
 )
 
 # ---------------------------------------------------------------------------
@@ -101,68 +102,36 @@ def test_empty_quoted_text_unchanged():
 
 
 # ---------------------------------------------------------------------------
-# WA-1: _split_message
+# WA-1: extract_message_parts
 # ---------------------------------------------------------------------------
 
-BOOKING = "https://app.playtomic.com/"
+
+def _tool_msg(name: str, content: object) -> MagicMock:
+    m = MagicMock()
+    m.name = name
+    m.content = json.dumps(content)
+    return m
 
 
-def test_short_text_returns_single_chunk():
-    assert _split_message("short text") == ["short text"]
+def test_extract_message_parts_returns_parts():
+    result = {"messages": [_tool_msg("send_messages", {"wa_messages": ["Hello", "World"]})]}
+    assert extract_message_parts(result) == ["Hello", "World"]
 
 
-def test_exactly_at_boundary_single_chunk():
-    text = "a" * 1200
-    assert _split_message(text) == [text]
+def test_extract_message_parts_empty_when_no_tool_message():
+    assert extract_message_parts({"messages": []}) == []
 
 
-def test_isolates_booking_link_as_final_chunk():
-    body = "Slot A ist verfügbar\n\nSlot B ist verfügbar"
-    link = f"Jetzt buchen: {BOOKING}payments?foo=bar"
-    text = body + "\n\n" + link
-    # max_chunk_chars=50 forces a split (total text ~100 chars > 50)
-    chunks = _split_message(text, max_chunk_chars=50, booking_url_prefix=BOOKING)
-    assert chunks[-1] == link
-    assert link not in "\n\n".join(chunks[:-1])
+def test_extract_message_parts_filters_empty_strings():
+    result = {"messages": [_tool_msg("send_messages", {"wa_messages": ["Hello", "", "World"]})]}
+    assert extract_message_parts(result) == ["Hello", "World"]
 
 
-def test_split_by_length_no_booking_url():
-    para = "x" * 700
-    text = para + "\n\n" + para
-    chunks = _split_message(text, max_chunk_chars=800, booking_url_prefix=BOOKING)
-    assert len(chunks) == 2
-    assert chunks[0] == para
-    assert chunks[1] == para
+def test_extract_message_parts_ignores_other_tools():
+    result = {"messages": [_tool_msg("send_poll", {"wa_poll": {}})]}
+    assert extract_message_parts(result) == []
 
 
-def test_single_chunk_when_fits():
-    para1 = "Hello there"
-    para2 = "How can I help?"
-    text = para1 + "\n\n" + para2
-    chunks = _split_message(text, max_chunk_chars=1200, booking_url_prefix=BOOKING)
-    assert chunks == [text]
-
-
-def test_multiple_paragraphs_merged_greedily():
-    # Each paragraph is 100 chars; 10 paragraphs = 1000 + 9*2 separators = 1018 chars
-    # With max_chunk_chars=550, we expect 2 chunks (first 5 paras, then 5 paras)
-    para = "a" * 100
-    text = "\n\n".join([para] * 10)
-    chunks = _split_message(text, max_chunk_chars=550, booking_url_prefix=BOOKING)
-    assert len(chunks) == 2
-    # Verify all content is preserved
-    assert "\n\n".join(chunks) == text
-
-
-def test_no_split_for_single_element_with_link():
-    link_only = f"Book: {BOOKING}foo"
-    assert _split_message(link_only, max_chunk_chars=200, booking_url_prefix=BOOKING) == [link_only]
-
-
-def test_oversized_paragraph_sent_as_own_chunk():
-    big_para = "z" * 2000
-    small_para = "small"
-    text = big_para + "\n\n" + small_para
-    chunks = _split_message(text, max_chunk_chars=1200, booking_url_prefix=BOOKING)
-    assert big_para in chunks
-    assert small_para in chunks
+def test_extract_message_parts_coerces_to_str():
+    result = {"messages": [_tool_msg("send_messages", {"wa_messages": [42, 3.14]})]}
+    assert extract_message_parts(result) == ["42", "3.14"]

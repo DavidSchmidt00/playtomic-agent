@@ -21,6 +21,20 @@ from playtomic_agent.tools import (
 settings = get_settings()
 
 
+@tool(
+    description=(
+        "Send a reply as multiple sequential WhatsApp messages. Use when your response has "
+        "distinct parts (e.g. intro text + slot list, or context + booking link). "
+        "Each part becomes its own message, sent in order."
+    )
+)
+def send_messages(
+    parts: Annotated[list[str], "Ordered list of message texts, one per WhatsApp message."],
+) -> Annotated[dict, "Message parts payload forwarded to WhatsApp."]:
+    """Instructs the server to send each part as a separate WhatsApp message."""
+    return {"wa_messages": parts}
+
+
 @tool(description="Present slot options as a native WhatsApp poll. Only use in groups.")
 def send_poll(
     question: Annotated[str, "Short poll question, e.g. 'Welcher Slot passt euch?'"],
@@ -49,6 +63,7 @@ WA_TOOLS = [
     find_clubs_by_location,
     find_clubs_by_name,
     update_user_profile,
+    send_messages,
     send_poll,
 ]
 
@@ -97,6 +112,9 @@ def _build_system_prompt(
         "1. NEVER invent data (names, times, prices, links). Use EXACT tool outputs.\n"
         "2. Keep responses SHORT. Use only WhatsApp formatting: *bold*, _italic_, ~strikethrough~, "
         "`monospace`. No markdown (no #headers, no [links](url), no tables).\n"
+        "   For booking links: ALWAYS paste the bare URL on its own line. NEVER wrap it as [text](url).\n"
+        "   When your reply has distinct parts (e.g. intro + slot list, or context + booking link), "
+        "call `send_messages` with each part as a separate list item instead of combining them.\n"
         "3. Always reply in the same language the user writes in.\n"
         "4. On first message: detect the user's language and call"
         " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n\n"
@@ -146,6 +164,21 @@ def create_whatsapp_agent(
     )
 
 
+def _extract_tool_message(result: dict, tool_name: str) -> dict | None:
+    """Return the parsed dict content of the first tool message matching tool_name."""
+    for m in result.get("messages", []):
+        if getattr(m, "name", None) != tool_name:
+            continue
+        content = getattr(m, "content", "")
+        try:
+            parsed = json.loads(content) if isinstance(content, str) else content
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return None
+
+
 def extract_final_text(result: dict) -> str:
     """Extract the last AIMessage text from a LangGraph invoke result."""
     messages = result.get("messages", [])
@@ -169,28 +202,31 @@ def extract_final_text(result: dict) -> str:
     return ""
 
 
+def extract_message_parts(result: dict) -> list[str]:
+    """Scan tool messages for a wa_messages payload from send_messages."""
+    payload = _extract_tool_message(result, send_messages.name)
+    if payload:
+        parts = payload.get("wa_messages")
+        if isinstance(parts, list):
+            return [str(p) for p in parts if p]
+    return []
+
+
 def extract_poll_data(result: dict) -> "dict[str, Any] | None":
     """Scan tool messages for a wa_poll payload from send_poll."""
-    for m in result.get("messages", []):
-        if getattr(m, "name", None) != "send_poll":
-            continue
-        content = getattr(m, "content", "")
-        try:
-            parsed = json.loads(content) if isinstance(content, str) else content
-            wa_poll = parsed.get("wa_poll")
-            if isinstance(parsed, dict) and isinstance(wa_poll, dict):
-                return wa_poll
-        except (json.JSONDecodeError, TypeError):
-            pass
+    payload = _extract_tool_message(result, send_poll.name)
+    if payload:
+        wa_poll = payload.get("wa_poll")
+        if isinstance(wa_poll, dict):
+            return wa_poll
     return None
 
 
 def extract_preference_updates(result: dict) -> dict:
     """Scan tool messages for profile_update payloads from update_user_profile."""
     updates: dict = {}
-    messages = result.get("messages", [])
-    for m in messages:
-        if getattr(m, "name", None) != "update_user_profile":
+    for m in result.get("messages", []):
+        if getattr(m, "name", None) != update_user_profile.name:
             continue
         content = getattr(m, "content", "")
         try:

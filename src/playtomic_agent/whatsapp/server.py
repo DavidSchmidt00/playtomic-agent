@@ -28,6 +28,7 @@ from playtomic_agent.log_config import setup_logging
 from playtomic_agent.whatsapp.agent import (
     create_whatsapp_agent,
     extract_final_text,
+    extract_message_parts,
     extract_poll_data,
     extract_preference_updates,
 )
@@ -93,61 +94,6 @@ def _prepend_quoted_context(user_input: str, quoted_text: str) -> str:
         return user_input
     excerpt = quoted_text[:300] + ("…" if len(quoted_text) > 300 else "")
     return f'[Replying to: "{excerpt}"]\n{user_input}'
-
-
-def _split_message(
-    text: str,
-    max_chunk_chars: int = 1200,
-    booking_url_prefix: str = "https://app.playtomic.com/",
-) -> list[str]:
-    """Split a long agent response into WhatsApp-friendly chunks.
-
-    Rules:
-    - If text fits in one chunk (≤ max_chunk_chars), return [text].
-    - Split on double-newline paragraph boundaries.
-    - Any paragraph containing a booking URL is a "link paragraph".
-    - If there is exactly one link paragraph and non-link content, isolate the
-      link paragraph as the final chunk.
-    - Never split mid-sentence. If a paragraph exceeds max_chunk_chars, send
-      it as its own chunk unchanged.
-    - Consecutive non-link paragraphs are merged greedily until the next one
-      would exceed max_chunk_chars.
-    - Zero or multiple link paragraphs: no special isolation — split by length only.
-    """
-    if len(text) <= max_chunk_chars:
-        return [text]
-
-    paragraphs = text.split("\n\n")
-    link_paragraphs = [p for p in paragraphs if booking_url_prefix in p]
-    non_link_paragraphs = [p for p in paragraphs if booking_url_prefix not in p]
-
-    if len(link_paragraphs) == 1 and non_link_paragraphs:
-        work_paragraphs = non_link_paragraphs
-        tail = [link_paragraphs[0]]
-    else:
-        # Zero or multiple link paragraphs: no special isolation — split by length only.
-        # Multiple booking links in one response is not expected in normal agent output.
-        work_paragraphs = paragraphs
-        tail = []
-
-    chunks: list[str] = []
-    current_parts: list[str] = []
-    current_len = 0
-
-    for para in work_paragraphs:
-        addition_len = (2 if current_parts else 0) + len(para)  # 2 for "\n\n" separator
-        if current_parts and current_len + addition_len > max_chunk_chars:
-            chunks.append("\n\n".join(current_parts))
-            current_parts = [para]
-            current_len = len(para)
-        else:
-            current_parts.append(para)
-            current_len += addition_len
-
-    if current_parts:
-        chunks.append("\n\n".join(current_parts))
-
-    return chunks + tail
 
 
 async def _send_text(wa_client: NewAClient, jid: Any, text: str) -> None:
@@ -238,8 +184,7 @@ async def _handle_poll_vote(
             return
 
         voter_jid = (
-            f"{message.Info.MessageSource.Sender.User}"
-            f"@{message.Info.MessageSource.Sender.Server}"
+            f"{message.Info.MessageSource.Sender.User}@{message.Info.MessageSource.Sender.Server}"
         )
         court_type = user_state.active_poll.get("court_type", "DOUBLE")
         threshold = 2 if court_type == "SINGLE" else 4
@@ -616,6 +561,7 @@ def main() -> None:
             typing_task = asyncio.create_task(_keep_typing(stop_typing))
             result = None
             timed_out = False
+            final_text = ""
             try:
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
@@ -625,17 +571,24 @@ def main() -> None:
                     ),
                     timeout=settings.agent_timeout_seconds,
                 )
-                # Delay while the typing indicator is still active so there's
-                # no visible gap between typing stopping and the message arriving.
-                _preview = extract_final_text(result) if result is not None else ""
-                if _preview:
-                    _delay = _compute_send_delay(_preview, settings.whatsapp_send_delay_wpm)
+                # Cache final_text here so we can use it for the pre-send delay
+                # and later for history — avoiding a second scan of result["messages"].
+                # Fall back to the first send_messages part when the agent used that
+                # tool instead of returning a plain final text.
+                final_text = extract_final_text(result) if result is not None else ""
+                _delay_text = final_text
+                if not _delay_text and result is not None:
+                    _first_parts = extract_message_parts(result)
+                    if _first_parts:
+                        _delay_text = _first_parts[0]
+                if _delay_text:
+                    _delay = _compute_send_delay(_delay_text, settings.whatsapp_send_delay_wpm)
                     if _delay > 0:
                         logger.debug(
                             "Send delay %.2fs for %s (%d words)",
                             _delay,
                             sender_id,
-                            len(_preview.split()),
+                            len(_delay_text.split()),
                         )
                         await asyncio.sleep(_delay)
             except TimeoutError:
@@ -672,7 +625,6 @@ def main() -> None:
                 await wa_client.send_message(sender_jid, msg)
                 return
 
-            final_text = extract_final_text(result)
             prefs = extract_preference_updates(result)
 
             if prefs:
@@ -680,8 +632,26 @@ def main() -> None:
                     user_state.language = detected_lang
                 user_state.profile.update(prefs)
                 logger.info("Updated profile for %s: %s", sender_id, prefs)
-            user_state.history = (messages + [{"role": "assistant", "content": final_text}])[-20:]
+
+            parts = extract_message_parts(result)
+            if not parts:
+                parts = [final_text] if final_text else []
+            user_state.history = (
+                messages + [{"role": "assistant", "content": "\n\n".join(parts)}]
+            )[-20:]
             storage.save(sender_id, user_state)
+
+            # Send text parts first, then poll (text provides context for the poll).
+            # Part 0 is sent raw: the keep-typing task already holds COMPOSING during
+            # the pre-send delay above, so _send_text would cause a presence flicker.
+            # Parts 1+ each need their own typing indicator via _send_text.
+            for i, part in enumerate(parts):
+                if i > 0:
+                    await _send_text(wa_client, sender_jid, part)
+                else:
+                    await wa_client.send_message(sender_jid, part)
+            if parts:
+                logger.info("Replied to %s (%d message(s))", sender_id, len(parts))
 
             if is_group:
                 poll_data = extract_poll_data(result)
@@ -721,15 +691,6 @@ def main() -> None:
                         len(display_options),
                         send_resp.ID,
                     )
-
-            if final_text:
-                chunks = _split_message(final_text)
-                for i, chunk in enumerate(chunks):
-                    if i > 0:
-                        await _send_text(wa_client, sender_jid, chunk)
-                    else:
-                        await wa_client.send_message(sender_jid, chunk)
-                logger.info("Replied to %s (%d chunk(s))", sender_id, len(chunks))
 
     # event_global_loop is a separate asyncio loop created by neonize that runs
     # the connection task and dispatches async event handlers.  We must start it
