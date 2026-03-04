@@ -1477,7 +1477,7 @@ body {
 }
 
 .find-club-wrap input.find-club-confirmed {
-  border-color: var(--accent-primary);
+  border-color: var(--accent);
 }
 
 .find-club-spinner {
@@ -1486,7 +1486,7 @@ body {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   pointer-events: none;
 }
 
@@ -1526,7 +1526,7 @@ body {
 
 .find-club-slug {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: monospace;
 }
 
