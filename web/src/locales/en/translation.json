@@ -45,7 +45,7 @@
     "region": {
         "label": "Region"
     },
-    "scanMode": {
+    "findMode": {
         "club_label": "Club",
         "club_placeholder": "Search for a club...",
         "club_searching": "Searching...",
@@ -69,7 +69,8 @@
         "results_summary": "{{count}} slots found across {{days}} days",
         "no_results": "No slots found for your criteria.",
         "book_btn": "Book →",
+        "edit_search": "Edit",
         "mode_chat": "Chat",
-        "mode_scan": "Scan"
+        "mode_find": "Find"
     }
 }
