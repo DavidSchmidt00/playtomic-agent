@@ -120,7 +120,7 @@ def test_search_happy_path(sample_slots):
     for slot in data["results"]:
         assert "booking_link" in slot
         assert slot["booking_link"].startswith("http")
-        assert slot["day_label"].startswith("Mon")
+        assert "day_label" not in slot
 
 
 def test_search_no_matching_weekday(sample_slots):
@@ -243,3 +243,56 @@ def test_search_results_sorted(sample_slots):
     assert data["total_count"] == 2
     dates = [r["date"] for r in data["results"]]
     assert dates == sorted(dates), "Results should be sorted by date ascending"
+
+
+# ─── /api/clubs tests ─────────────────────────────────────────────────────────
+
+
+def _make_mock_clubs_client(clubs):
+    """Return a patched PlaytomicClient that returns *clubs* from search_clubs."""
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.search_clubs.return_value = clubs
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+    return MockClient
+
+
+def test_clubs_happy_path():
+    """Query with 2+ chars returns matching clubs as name/slug pairs."""
+    c1 = MagicMock()
+    c1.name = "Lemon Padel Club"
+    c1.slug = "lemon-padel-club"
+    c2 = MagicMock()
+    c2.name = "Lemon Indoor"
+    c2.slug = "lemon-indoor"
+    MockClient = _make_mock_clubs_client([c1, c2])
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.get("/api/clubs?q=lemon")
+
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 2
+    assert data[0] == {"name": "Lemon Padel Club", "slug": "lemon-padel-club"}
+
+
+def test_clubs_short_query_returns_empty():
+    """Query shorter than 2 chars returns [] without calling Playtomic."""
+    res = client.get("/api/clubs?q=l")
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+def test_clubs_api_error_returns_502():
+    """Upstream APIError is mapped to 502."""
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.search_clubs.side_effect = APIError("Upstream down")
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.get("/api/clubs?q=lemon")
+
+    assert res.status_code == 502

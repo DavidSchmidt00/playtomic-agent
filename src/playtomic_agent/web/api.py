@@ -102,7 +102,6 @@ class SearchRequest(BaseModel):
 
 class SlotResult(BaseModel):
     date: str  # YYYY-MM-DD
-    day_label: str  # e.g. "Mon 05.03"
     local_time: str  # HH:MM
     court: str
     duration: int
@@ -399,7 +398,7 @@ async def search_slots(req: SearchRequest):
     # 4. Scan each (date, window) combination
     results: list[SlotResult] = []
     dates_with_windows: set[str] = set()
-    day_abbrs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    tz_zone = ZoneInfo(tz_str)
 
     try:
         with PlaytomicClient() as client:
@@ -419,13 +418,11 @@ async def search_slots(req: SearchRequest):
                         timezone=tz_str,
                         duration=req.duration,
                     )
-                    tz_zone = ZoneInfo(tz_str)
                     for slot in slots:
                         local_dt = slot.time.astimezone(tz_zone)
                         results.append(
                             SlotResult(
                                 date=date_str,
-                                day_label=f"{day_abbrs[d.weekday()]} {d.strftime('%d.%m')}",
                                 local_time=local_dt.strftime("%H:%M"),
                                 court=slot.court_name,
                                 duration=slot.duration,

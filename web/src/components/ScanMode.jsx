@@ -15,19 +15,21 @@ function formatDayLabel(dateStr, lang) {
 }
 
 function addDays(dateStr, days) {
-  const d = new Date(dateStr)
+  // T12:00:00 avoids DST midnight-shift issues when parsing local dates
+  const d = new Date(dateStr + 'T12:00:00')
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function ScanMode({ region, profile }) {
   const { t, i18n } = useTranslation()
 
-  const [clubName, setClubName] = useState(profile?.preferred_club_slug || '')
+  const [clubName, setClubName] = useState(profile?.preferred_club_name || '')
   const [clubSlug, setClubSlug] = useState(profile?.preferred_club_slug || '')
   const [clubOptions, setClubOptions] = useState([])
   const [clubSearching, setClubSearching] = useState(false)
@@ -149,8 +151,8 @@ export default function ScanMode({ region, profile }) {
   // Group results by date
   const grouped = results
     ? results.reduce((acc, slot) => {
-        if (!acc[slot.date]) acc[slot.date] = { label: slot.day_label, slots: [] }
-        acc[slot.date].slots.push(slot)
+        if (!acc[slot.date]) acc[slot.date] = []
+        acc[slot.date].push(slot)
         return acc
       }, {})
     : null
@@ -289,10 +291,10 @@ export default function ScanMode({ region, profile }) {
           {results.length === 0 ? (
             <p className="scan-no-results">{t('scanMode.no_results')}</p>
           ) : (
-            Object.entries(grouped).map(([date, group]) => (
+            Object.entries(grouped).map(([date, slots]) => (
               <div key={date} className="scan-date-group">
                 <div className="scan-date-label">{formatDayLabel(date, region?.language || i18n.language)}</div>
-                {group.slots.map((slot, i) => (
+                {slots.map((slot, i) => (
                   <div key={i} className="scan-slot">
                     <span className="scan-slot-time">{slot.local_time}</span>
                     <span className="scan-slot-court">{slot.court}</span>
