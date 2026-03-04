@@ -40,20 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files if the directory exists (Production mode)
+# Serve static assets if the directory exists (Production mode)
 # This assumes the frontend build is copied to /app/static in the Docker image
 STATIC_DIR = os.environ.get("STATIC_DIR", "/app/static")
 if os.path.isdir(STATIC_DIR):
     app.mount("/assets", StaticFiles(directory=f"{STATIC_DIR}/assets"), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        # Serve index.html for unknown paths (SPA routing)
-        # Check if file exists in static dir, if not return index.html
-        possible_file = os.path.join(STATIC_DIR, full_path)
-        if os.path.isfile(possible_file):
-            return FileResponse(possible_file)
-        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/health")
@@ -441,3 +432,16 @@ async def search_slots(req: SearchRequest):
         total_count=len(results),
         dates_checked=len(dates_with_windows),
     )
+
+
+# SPA catch-all — must be registered AFTER all /api/* routes so FastAPI's
+# router matches specific routes first. Serves index.html for any unknown
+# path (client-side routing), or the actual static file if it exists.
+if os.path.isdir(STATIC_DIR):
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        possible_file = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(possible_file):
+            return FileResponse(possible_file)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
