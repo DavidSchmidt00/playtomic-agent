@@ -44,5 +44,32 @@
     },
     "region": {
         "label": "Region"
+    },
+    "scanMode": {
+        "club_label": "Club",
+        "club_placeholder": "Search for a club...",
+        "club_searching": "Searching...",
+        "club_not_selected": "Please select a club from the search results.",
+        "date_from": "From",
+        "date_to": "To",
+        "duration": "Duration",
+        "any_duration": "Any",
+        "court_type": "Court Type",
+        "any_court": "Any",
+        "single": "Single",
+        "double": "Double",
+        "time_windows": "Time Windows",
+        "add_window": "+ Add Window",
+        "remove_window": "Remove",
+        "from_time": "From",
+        "to_time": "To",
+        "days": { "0": "Mo", "1": "Tu", "2": "We", "3": "Th", "4": "Fr", "5": "Sa", "6": "Su" },
+        "search_btn": "Search",
+        "searching": "Searching...",
+        "results_summary": "{{count}} slots found across {{days}} days",
+        "no_results": "No slots found for your criteria.",
+        "book_btn": "Book →",
+        "mode_chat": "Chat",
+        "mode_scan": "Scan"
     }
 }

@@ -2,6 +2,11 @@ import asyncio
 import json
 import logging
 import os
+from collections import defaultdict
+from datetime import date as _date
+from datetime import timedelta
+from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +17,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from playtomic_agent.context import set_request_region
+from playtomic_agent.client.api import PlaytomicClient
+from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
+from playtomic_agent.context import get_timezone, set_request_region
 from playtomic_agent.web.agent import create_playtomic_agent
 
 logger = logging.getLogger(__name__)
@@ -73,6 +80,45 @@ class ProfileSuggestion(BaseModel):
 class ChatResponse(BaseModel):
     text: str
     profile_suggestions: list[ProfileSuggestion] | None = None
+
+
+class TimeWindow(BaseModel):
+    days: list[int]  # 0=Mon … 6=Sun
+    start: str  # HH:MM
+    end: str  # HH:MM
+
+
+class SearchRequest(BaseModel):
+    club_slug: str
+    date_from: str
+    date_to: str
+    time_windows: list[TimeWindow]
+    duration: int | None = None
+    court_type: Literal["SINGLE", "DOUBLE"] | None = None
+    timezone: str | None = None
+    language: str | None = None
+    country: str | None = None
+
+
+class SlotResult(BaseModel):
+    date: str  # YYYY-MM-DD
+    local_time: str  # HH:MM
+    court: str
+    duration: int
+    price: str
+    booking_link: str
+
+
+class SearchResponse(BaseModel):
+    results: list[SlotResult]
+    total_count: int
+    dates_checked: int
+    error: str | None = None
+
+
+class ClubResult(BaseModel):
+    name: str
+    slug: str
 
 
 def _extract_text(m) -> str | None:
@@ -307,3 +353,91 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
             await asyncio.sleep(0.01)  # Force flush
 
     return StreamingResponse(stream_agent_events(), media_type="text/event-stream")
+
+
+@app.get("/api/clubs")
+async def search_clubs_endpoint(q: str = "") -> list[ClubResult]:
+    """Search for clubs by name. Returns matching clubs with name and slug."""
+    if len(q) < 2:
+        return []
+    try:
+        with PlaytomicClient() as client:
+            clubs = client.search_clubs(query=q)
+        return [ClubResult(name=c.name, slug=c.slug) for c in clubs]
+    except APIError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/search", response_model=SearchResponse)
+async def search_slots(req: SearchRequest):
+    """Scan for available slots across a date range and time windows, bypassing the LLM."""
+    # 1. Validate date range
+    try:
+        d_from = _date.fromisoformat(req.date_from)
+        d_to = _date.fromisoformat(req.date_to)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.") from exc
+    if d_to < d_from:
+        raise HTTPException(status_code=422, detail="date_to must be >= date_from.")
+    if (d_to - d_from).days > 13:
+        raise HTTPException(status_code=422, detail="Date range must not exceed 14 days.")
+    if not req.time_windows:
+        raise HTTPException(status_code=422, detail="At least one time_window is required.")
+
+    # 2. Set request context
+    set_request_region(country=req.country, language=req.language, timezone=req.timezone)
+    tz_str = get_timezone()
+
+    # 3. Expand dates and build weekday → windows map
+    all_dates = [d_from + timedelta(days=i) for i in range((d_to - d_from).days + 1)]
+    window_by_day: dict[int, list[TimeWindow]] = defaultdict(list)
+    for w in req.time_windows:
+        for day in w.days:
+            window_by_day[day].append(w)
+
+    # 4. Scan each (date, window) combination
+    results: list[SlotResult] = []
+    dates_with_windows: set[str] = set()
+    tz_zone = ZoneInfo(tz_str)
+
+    try:
+        with PlaytomicClient() as client:
+            for d in all_dates:
+                windows = window_by_day.get(d.weekday(), [])
+                if not windows:
+                    continue
+                date_str = d.isoformat()
+                dates_with_windows.add(date_str)
+                for window in windows:
+                    slots = client.find_slots(
+                        club_slug=req.club_slug,
+                        date=date_str,
+                        court_type=req.court_type,
+                        start_time=window.start,
+                        end_time=window.end,
+                        timezone=tz_str,
+                        duration=req.duration,
+                    )
+                    for slot in slots:
+                        local_dt = slot.time.astimezone(tz_zone)
+                        results.append(
+                            SlotResult(
+                                date=date_str,
+                                local_time=local_dt.strftime("%H:%M"),
+                                court=slot.court_name,
+                                duration=slot.duration,
+                                price=slot.price,
+                                booking_link=slot.get_link(),
+                            )
+                        )
+    except ClubNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except APIError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    results.sort(key=lambda r: (r.date, r.local_time))
+    return SearchResponse(
+        results=results,
+        total_count=len(results),
+        dates_checked=len(dates_with_windows),
+    )

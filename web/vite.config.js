@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     host: true,
     port: 8080,
+    watch: {
+      // WSL2/devcontainer: inotify doesn't fire reliably, use polling
+      usePolling: true,
+      interval: 500,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8082',
