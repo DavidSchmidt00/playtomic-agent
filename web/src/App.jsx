@@ -10,7 +10,15 @@ export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('padel-agent-theme') || 'dark'
   })
-  const [mode, setMode] = useState('chat')
+  const modeFromPath = () => (window.location.pathname === '/find' ? 'find' : 'chat')
+  const [mode, setMode] = useState(modeFromPath)
+
+  // Sync URL ↔ mode
+  useEffect(() => {
+    const onPopState = () => setMode(modeFromPath())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
   const { region, setRegionId } = useRegion()
   const { profile } = useProfile()
   const { t, i18n } = useTranslation()
@@ -42,13 +50,13 @@ export default function App() {
         <div className="mode-toggle-bar">
           <button
             className={`mode-btn${mode === 'chat' ? ' active' : ''}`}
-            onClick={() => setMode('chat')}
+            onClick={() => { history.pushState(null, '', '/chat'); setMode('chat') }}
           >
             {t('findMode.mode_chat')}
           </button>
           <button
             className={`mode-btn${mode === 'find' ? ' active' : ''}`}
-            onClick={() => setMode('find')}
+            onClick={() => { history.pushState(null, '', '/find'); setMode('find') }}
           >
             {t('findMode.mode_find')}
           </button>
@@ -68,10 +76,12 @@ export default function App() {
         </div>
       </header>
       <main>
-        {mode === 'find'
-          ? <FindMode region={region} profile={profile} />
-          : <Chat ref={chatRef} region={region} />
-        }
+        <div style={{ display: mode === 'chat' ? 'contents' : 'none' }}>
+          <Chat ref={chatRef} region={region} />
+        </div>
+        <div style={{ display: mode === 'find' ? 'contents' : 'none' }}>
+          <FindMode region={region} profile={profile} />
+        </div>
       </main>
     </div>
   )
