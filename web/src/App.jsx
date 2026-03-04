@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Chat from './components/Chat'
-import ScanMode from './components/ScanMode'
+import FindMode from './components/FindMode'
 import RegionSelector from './components/RegionSelector'
 import useRegion from './hooks/useRegion'
 import useProfile from './hooks/useProfile'
@@ -39,6 +39,20 @@ export default function App() {
           <span className="header-icon">🎾</span>
           <span className="header-accent">Padel Agent</span>
         </h1>
+        <div className="mode-toggle-bar">
+          <button
+            className={`mode-btn${mode === 'chat' ? ' active' : ''}`}
+            onClick={() => setMode('chat')}
+          >
+            {t('findMode.mode_chat')}
+          </button>
+          <button
+            className={`mode-btn${mode === 'find' ? ' active' : ''}`}
+            onClick={() => setMode('find')}
+          >
+            {t('findMode.mode_find')}
+          </button>
+        </div>
         <div className="header-controls">
           <RegionSelector region={region} onRegionChange={setRegionId} />
           <button
@@ -53,23 +67,9 @@ export default function App() {
           </button>
         </div>
       </header>
-      <div className="mode-toggle-bar">
-        <button
-          className={`mode-btn${mode === 'chat' ? ' active' : ''}`}
-          onClick={() => setMode('chat')}
-        >
-          {t('scanMode.mode_chat')}
-        </button>
-        <button
-          className={`mode-btn${mode === 'scan' ? ' active' : ''}`}
-          onClick={() => setMode('scan')}
-        >
-          {t('scanMode.mode_scan')}
-        </button>
-      </div>
       <main>
-        {mode === 'scan'
-          ? <ScanMode region={region} profile={profile} />
+        {mode === 'find'
+          ? <FindMode region={region} profile={profile} />
           : <Chat ref={chatRef} region={region} />
         }
       </main>
