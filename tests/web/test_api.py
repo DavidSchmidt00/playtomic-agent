@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
+
+from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.web.api import app
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -81,3 +83,163 @@ def test_chat_missing_prompt_and_messages():
     """Should return 400 when neither prompt nor messages is provided."""
     res = client.post("/api/chat", json={})
     assert res.status_code == 400
+
+
+# ─── /api/search tests ────────────────────────────────────────────────────────
+
+_BASE_SEARCH_BODY = {
+    "club_slug": "test-club",
+    "date_from": "2026-03-09",  # Monday
+    "date_to": "2026-03-09",
+    "time_windows": [{"days": [0], "start": "18:00", "end": "22:00"}],
+    "timezone": "Europe/Berlin",
+}
+
+
+def _make_mock_client(slots):
+    """Return a patched PlaytomicClient context manager that returns *slots* from find_slots."""
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.find_slots.return_value = slots
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+    return MockClient
+
+
+def test_search_happy_path(sample_slots):
+    """Monday date + Monday window → returns slots with booking links."""
+    MockClient = _make_mock_client(sample_slots)
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.post("/api/search", json=_BASE_SEARCH_BODY)
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_count"] == len(sample_slots)
+    assert data["dates_checked"] == 1
+    for slot in data["results"]:
+        assert "booking_link" in slot
+        assert slot["booking_link"].startswith("http")
+        assert slot["day_label"].startswith("Mon")
+
+
+def test_search_no_matching_weekday(sample_slots):
+    """Monday date + Saturday-only window → no results, dates_checked == 0."""
+    body = {**_BASE_SEARCH_BODY, "time_windows": [{"days": [5], "start": "14:00", "end": "20:00"}]}
+    MockClient = _make_mock_client(sample_slots)
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.post("/api/search", json=body)
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_count"] == 0
+    assert data["dates_checked"] == 0
+
+
+def test_search_club_not_found():
+    """find_slots raising ClubNotFoundError → 404."""
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.find_slots.side_effect = ClubNotFoundError("test-club", "slug")
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.post("/api/search", json=_BASE_SEARCH_BODY)
+
+    assert res.status_code == 404
+
+
+def test_search_api_error():
+    """find_slots raising APIError → 502."""
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.find_slots.side_effect = APIError("Upstream failure")
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.post("/api/search", json=_BASE_SEARCH_BODY)
+
+    assert res.status_code == 502
+
+
+def test_search_date_range_too_large():
+    """Date range > 14 days → 422, no mock needed."""
+    body = {**_BASE_SEARCH_BODY, "date_from": "2026-03-01", "date_to": "2026-03-20"}
+    res = client.post("/api/search", json=body)
+    assert res.status_code == 422
+    assert "14 days" in res.json()["detail"]
+
+
+def test_search_date_to_before_date_from():
+    """date_to < date_from → 422."""
+    body = {**_BASE_SEARCH_BODY, "date_from": "2026-03-10", "date_to": "2026-03-09"}
+    res = client.post("/api/search", json=body)
+    assert res.status_code == 422
+    assert "date_to" in res.json()["detail"]
+
+
+def test_search_empty_time_windows():
+    """Empty time_windows list → 422."""
+    body = {**_BASE_SEARCH_BODY, "time_windows": []}
+    res = client.post("/api/search", json=body)
+    assert res.status_code == 422
+    assert "time_window" in res.json()["detail"]
+
+
+def test_search_results_sorted(sample_slots):
+    """Results from multiple dates are sorted ascending by (date, local_time)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from playtomic_agent.models import Slot
+
+    # Two slots on different dates: slot B comes before slot A in API order
+    slot_a = Slot(
+        club_id="c1",
+        court_id="court-1",
+        court_name="Court 1",
+        time=datetime(2026, 3, 10, 17, 0, 0, tzinfo=ZoneInfo("UTC")),  # Tuesday 18:00 Berlin
+        duration=90,
+        price="20.00 EUR",
+    )
+    slot_b = Slot(
+        club_id="c1",
+        court_id="court-1",
+        court_name="Court 1",
+        time=datetime(2026, 3, 9, 18, 0, 0, tzinfo=ZoneInfo("UTC")),  # Monday 19:00 Berlin
+        duration=90,
+        price="20.00 EUR",
+    )
+
+    call_count = 0
+
+    def find_slots_side_effect(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        # First call = Monday, second call = Tuesday
+        return [slot_b] if call_count == 1 else [slot_a]
+
+    MockClient = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.find_slots.side_effect = find_slots_side_effect
+    MockClient.return_value.__enter__.return_value = mock_instance
+    MockClient.return_value.__exit__.return_value = False
+
+    body = {
+        **_BASE_SEARCH_BODY,
+        "date_from": "2026-03-09",  # Monday
+        "date_to": "2026-03-10",  # Tuesday
+        "time_windows": [{"days": [0, 1], "start": "18:00", "end": "22:00"}],
+    }
+
+    with patch("playtomic_agent.web.api.PlaytomicClient", MockClient):
+        res = client.post("/api/search", json=body)
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_count"] == 2
+    dates = [r["date"] for r in data["results"]]
+    assert dates == sorted(dates), "Results should be sorted by date ascending"

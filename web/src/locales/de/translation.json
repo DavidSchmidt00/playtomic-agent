@@ -44,5 +44,32 @@
     },
     "region": {
         "label": "Region"
+    },
+    "scanMode": {
+        "club_label": "Club",
+        "club_placeholder": "Club suchen...",
+        "club_searching": "Suche läuft...",
+        "club_not_selected": "Bitte einen Club aus den Suchergebnissen auswählen.",
+        "date_from": "Von",
+        "date_to": "Bis",
+        "duration": "Dauer",
+        "any_duration": "Beliebig",
+        "court_type": "Platzart",
+        "any_court": "Beliebig",
+        "single": "Einzel",
+        "double": "Doppel",
+        "time_windows": "Zeitfenster",
+        "add_window": "+ Fenster hinzufügen",
+        "remove_window": "Entfernen",
+        "from_time": "Von",
+        "to_time": "Bis",
+        "days": { "0": "Mo", "1": "Di", "2": "Mi", "3": "Do", "4": "Fr", "5": "Sa", "6": "So" },
+        "search_btn": "Suchen",
+        "searching": "Suche läuft...",
+        "results_summary": "{{count}} Slots über {{days}} Tage gefunden",
+        "no_results": "Keine Slots für deine Kriterien gefunden.",
+        "book_btn": "Buchen →",
+        "mode_chat": "Chat",
+        "mode_scan": "Scanner"
     }
 }
