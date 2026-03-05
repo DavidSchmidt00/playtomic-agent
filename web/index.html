@@ -19,7 +19,7 @@
     // the previous scroll position when the app returns to foreground
     if (window.matchMedia('(display-mode: standalone)').matches) {
       history.scrollRestoration = 'manual';
-      window.scrollTo(0, 0);
+      window.addEventListener('load', () => window.scrollTo(0, 0));
     }
   </script>
 </head>
