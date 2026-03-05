@@ -853,7 +853,7 @@ body {
 
   /* ─── Chat Container ─── */
   .chat-container {
-    padding: 0.5rem 0.6rem 1rem;
+    padding: 0.4rem 0.5rem 0.5rem;
     gap: 0.5rem;
   }
 
@@ -876,7 +876,7 @@ body {
   /* ─── Chat Box (edge-to-edge on mobile) ─── */
   .chat-box {
     max-width: 100%;
-    padding: 1rem;
+    padding: 0.6rem;
     border-radius: var(--radius-sm);
     border-left: none;
     border-right: none;
@@ -961,7 +961,8 @@ body {
   /* ─── Input Row ─── */
   .input-row {
     gap: 0.35rem;
-    padding: 0.5rem 0 0;
+    padding: 0.4rem 0;
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   .input-row input {
@@ -1006,7 +1007,7 @@ body {
   }
 
   .chat-container {
-    padding: 0.4rem 0.5rem 0.5rem;
+    padding: 0.25rem 0.25rem 0.4rem;
   }
 
   .chat-box {
