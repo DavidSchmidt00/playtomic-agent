@@ -14,6 +14,14 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="apple-touch-icon" href="/apple-icon-180x180.png" />
   <title>Padel Agent</title>
+  <script>
+    // Disable scroll restoration in PWA — Chrome otherwise restores
+    // the previous scroll position when the app returns to foreground
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      history.scrollRestoration = 'manual';
+      window.scrollTo(0, 0);
+    }
+  </script>
 </head>
 
 <body>
