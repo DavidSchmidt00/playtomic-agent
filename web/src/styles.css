@@ -117,16 +117,11 @@ body {
   overflow: hidden;
 }
 
-/* ─── PWA standalone: respect device safe areas ─── */
+/* ─── PWA standalone: lock viewport, respect device safe areas ─── */
 @media (display-mode: standalone) {
-
-  html,
-  body {
-    overflow: hidden;
-    height: 100%;
-  }
-
   .app-root {
+    position: fixed;
+    inset: 0;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
