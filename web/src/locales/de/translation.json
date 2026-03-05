@@ -52,6 +52,8 @@
         "club_not_selected": "Bitte einen Club aus den Suchergebnissen auswählen.",
         "date_from": "Von",
         "date_to": "Bis",
+        "next_7_days": "Nächste 7 Tage",
+        "next_2_weeks": "Nächste 2 Wochen",
         "duration": "Dauer",
         "any_duration": "Beliebig",
         "court_type": "Platzart",
@@ -63,7 +65,15 @@
         "remove_window": "Entfernen",
         "from_time": "Von",
         "to_time": "Bis",
-        "days": { "0": "Mo", "1": "Di", "2": "Mi", "3": "Do", "4": "Fr", "5": "Sa", "6": "So" },
+        "days": {
+            "0": "Mo",
+            "1": "Di",
+            "2": "Mi",
+            "3": "Do",
+            "4": "Fr",
+            "5": "Sa",
+            "6": "So"
+        },
         "search_btn": "Suchen",
         "searching": "Suche läuft...",
         "results_summary": "{{count}} Slots über {{days}} Tage gefunden",
@@ -71,6 +81,12 @@
         "book_btn": "Buchen →",
         "edit_search": "Bearbeiten",
         "mode_chat": "Chat",
-        "mode_find": "Suchen"
+        "mode_find": "Suchen",
+        "presets_label": "Gespeicherte Suchen",
+        "preset_placeholder": "Vorlage wählen...",
+        "save_preset_btn": "Als Vorlage speichern",
+        "save_preset_short": "+ Speichern",
+        "save_preset_prompt": "Name für diese Vorlage:",
+        "delete_preset": "Löschen"
     }
 }

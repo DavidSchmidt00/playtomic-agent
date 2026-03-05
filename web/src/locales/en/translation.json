@@ -52,6 +52,8 @@
         "club_not_selected": "Please select a club from the search results.",
         "date_from": "From",
         "date_to": "To",
+        "next_7_days": "Next 7 days",
+        "next_2_weeks": "Next 2 weeks",
         "duration": "Duration",
         "any_duration": "Any",
         "court_type": "Court Type",
@@ -63,7 +65,15 @@
         "remove_window": "Remove",
         "from_time": "From",
         "to_time": "To",
-        "days": { "0": "Mo", "1": "Tu", "2": "We", "3": "Th", "4": "Fr", "5": "Sa", "6": "Su" },
+        "days": {
+            "0": "Mo",
+            "1": "Tu",
+            "2": "We",
+            "3": "Th",
+            "4": "Fr",
+            "5": "Sa",
+            "6": "Su"
+        },
         "search_btn": "Search",
         "searching": "Searching...",
         "results_summary": "{{count}} slots found across {{days}} days",
@@ -71,6 +81,12 @@
         "book_btn": "Book →",
         "edit_search": "Edit",
         "mode_chat": "Chat",
-        "mode_find": "Find"
+        "mode_find": "Find",
+        "presets_label": "Saved Searches",
+        "preset_placeholder": "Choose a preset...",
+        "save_preset_btn": "Save as preset",
+        "save_preset_short": "+ Save",
+        "save_preset_prompt": "Name for this preset:",
+        "delete_preset": "Delete"
     }
 }
