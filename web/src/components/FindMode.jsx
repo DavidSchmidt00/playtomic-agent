@@ -38,6 +38,7 @@ export default function FindMode({ region, profile }) {
   const [clubOptions, setClubOptions] = useState([])
   const [clubSearching, setClubSearching] = useState(false)
   const clubDebounceRef = useRef(null)
+  const containerRef = useRef(null)
   const [dateFrom, setDateFrom] = useState(todayStr())
   const [dateTo, setDateTo] = useState(addDays(todayStr(), 6))
   const [duration, setDuration] = useState('')
@@ -296,25 +297,28 @@ export default function FindMode({ region, profile }) {
     : null
 
   return (
-    <div className="find-container">
-      {/* Collapsed summary bar */}
+    <div className="find-mode-root">
+      {/* Collapsed summary bar — outside scroll area so it never scrolls away */}
       {!formExpanded && (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
-          <button className="find-filter-summary-bar" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }} onClick={() => setFormExpanded(true)}>
-            <span className="find-filter-summary-text">{getSearchSummary()}</span>
-            <span className="find-filter-edit-label">{t('findMode.edit_search')} ✏️</span>
-          </button>
-          <button
-            type="button"
-            className="clear-chat-btn"
-            onClick={handleClearSearch}
-            title={t('findMode.clear_search', { defaultValue: 'Clear search' })}
-          >
-            🗑️
-          </button>
+        <div className="find-filter-bar-outer">
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+            <button className="find-filter-summary-bar" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }} onClick={() => setFormExpanded(true)}>
+              <span className="find-filter-summary-text">{getSearchSummary()}</span>
+              <span className="find-filter-edit-label">{t('findMode.edit_search')} ✏️</span>
+            </button>
+            <button
+              type="button"
+              className="clear-chat-btn"
+              onClick={handleClearSearch}
+              title={t('findMode.clear_search', { defaultValue: 'Clear search' })}
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       )}
 
+    <div className="find-container" ref={containerRef}>
       {/* Expandable form */}
       {formExpanded && (
         <form className="find-form" onSubmit={handleSearch}>
@@ -575,6 +579,7 @@ export default function FindMode({ region, profile }) {
                           onChange={() => toggleSlotSelection(sid)}
                           style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }}
                         />
+                        <span className="find-slot-meta" style={{ minWidth: '60px' }}>{formatDayLabel(slot.date, region?.language || i18n.language)}</span>
                         <span className="find-slot-time">{slot.local_time}</span>
                         <span className="find-slot-court">{slot.court}</span>
                         <span className="find-slot-meta">{slot.duration} min</span>
@@ -652,6 +657,7 @@ export default function FindMode({ region, profile }) {
           )}
         </div>
       )}
+    </div>
     </div>
   )
 }
