@@ -15,7 +15,15 @@ export default function VotePage({ voteId }) {
   const [pendingVotes, setPendingVotes] = useState({})   // {slot_id: true|false} before submit
   const [submittedVotes, setSubmittedVotes] = useState(null) // {slot_id: bool} after submit
   const [submitting, setSubmitting] = useState(false)
+  const [openPopover, setOpenPopover] = useState(null) // slot_id of open attendee popover
   const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (openPopover === null) return
+    const close = () => setOpenPopover(null)
+    document.addEventListener('click', close, { capture: true, once: true })
+    return () => document.removeEventListener('click', close, { capture: true })
+  }, [openPopover])
 
   const fetchSession = useCallback(async () => {
     try {
@@ -53,7 +61,7 @@ export default function VotePage({ voteId }) {
       })
       if (!res.ok) return
       const data = await res.json()
-      setSession(prev => prev ? { ...prev, tally: data.tally, voter_count: data.voter_count } : prev)
+      setSession(prev => prev ? { ...prev, tally: data.tally, voter_count: data.voter_count, voters: data.voters, attendees: data.attendees } : prev)
       setSubmittedVotes({ ...pendingVotes })
     } finally {
       setSubmitting(false)
@@ -79,10 +87,7 @@ export default function VotePage({ voteId }) {
 
   return (
     <div className="find-container">
-      <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem' }}>🗳️ {t('votePage.title')}</h2>
-      <p style={{ margin: '0 0 14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        {t('votePage.tagline')}
-      </p>
+      <h2 style={{ margin: '0 0 14px', fontSize: '1.1rem' }}>🗳️ {t('votePage.title')}</h2>
 
       {/* Name input (shown until votes submitted) */}
       {submittedVotes === null && (
@@ -98,10 +103,18 @@ export default function VotePage({ voteId }) {
         </div>
       )}
 
+      {/* Voter list */}
+      {session?.voters?.length > 0 && (
+        <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          {session.voters.join(' · ')}
+        </p>
+      )}
+
       {/* Slot list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {session?.slots.map(slot => {
           const yesCount = session.tally[slot.slot_id] || 0
+          const slotAttendees = session.attendees?.[slot.slot_id] ?? []
           const total = session.voter_count
           const thresh = threshold(slot.court_type)
           const pct = Math.min(100, Math.round((yesCount / thresh) * 100))
@@ -121,17 +134,36 @@ export default function VotePage({ voteId }) {
               {/* Slot header */}
               <div style={{ display: 'flex', width: '100%', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="find-slot-time">{slot.date} {slot.local_time}</span>
-                <span className="find-slot-court">{slot.court}</span>
+                <span className="find-slot-court" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{slot.court}</span>
                 <span className="find-slot-meta">{slot.duration} min</span>
                 <span className="find-slot-price">{slot.price}</span>
-                <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                  {t('votePage.can_attend_count', { count: yesCount })}{total > 0 ? ` / ${total}` : ''}
+                <span style={{ marginLeft: 'auto', position: 'relative' }}>
+                  <button
+                    onClick={() => slotAttendees.length > 0 && setOpenPopover(openPopover === slot.slot_id ? null : slot.slot_id)}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap',
+                      cursor: slotAttendees.length > 0 ? 'pointer' : 'default',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {t('votePage.attendees')}: {yesCount}/{thresh}
+                  </button>
+                  {openPopover === slot.slot_id && (
+                    <div
+                      onClick={() => setOpenPopover(null)}
+                      style={{
+                        position: 'absolute', right: 0, top: '100%', marginTop: '6px', zIndex: 10,
+                        background: 'var(--bg-surface)', border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)', padding: '8px 12px',
+                        fontSize: '0.8rem', color: 'var(--text-primary)', whiteSpace: 'nowrap',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      {slotAttendees.join(', ')}
+                    </div>
+                  )}
                 </span>
-                {isWinner && (
-                  <a href={slot.booking_link} className="find-book-btn" target="_blank" rel="noopener noreferrer">
-                    {t('votePage.book_btn')}
-                  </a>
-                )}
               </div>
 
               {/* Progress bar */}
@@ -142,14 +174,14 @@ export default function VotePage({ voteId }) {
                 }} />
               </div>
 
-              {/* Can / Can't buttons */}
-              <div style={{ display: 'flex', gap: '6px' }}>
+              {/* Can / Can't buttons + book button */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%' }}>
                 <button
                   style={{
                     padding: '4px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                    border: `1px solid ${myAnswer === true ? 'rgba(34,197,94,0.7)' : 'var(--border-color)'}`,
-                    background: myAnswer === true ? 'rgba(34,197,94,0.15)' : 'var(--bg-surface-raised)',
-                    color: myAnswer === true ? 'rgb(134,239,172)' : 'var(--text-secondary)',
+                    border: `1px solid ${myAnswer === true ? 'rgb(22,163,74)' : 'var(--border-color)'}`,
+                    background: myAnswer === true ? 'rgba(22,163,74,0.12)' : 'var(--bg-surface-raised)',
+                    color: 'var(--text-primary)',
                     fontWeight: myAnswer === true ? 600 : 400,
                   }}
                   disabled={submittedVotes !== null}
@@ -160,9 +192,9 @@ export default function VotePage({ voteId }) {
                 <button
                   style={{
                     padding: '4px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                    border: `1px solid ${myAnswer === false ? 'rgba(239,68,68,0.7)' : 'var(--border-color)'}`,
-                    background: myAnswer === false ? 'rgba(239,68,68,0.12)' : 'var(--bg-surface-raised)',
-                    color: myAnswer === false ? 'rgb(252,165,165)' : 'var(--text-secondary)',
+                    border: `1px solid ${myAnswer === false ? 'rgb(220,38,38)' : 'var(--border-color)'}`,
+                    background: myAnswer === false ? 'rgba(220,38,38,0.1)' : 'var(--bg-surface-raised)',
+                    color: 'var(--text-primary)',
                     fontWeight: myAnswer === false ? 600 : 400,
                   }}
                   disabled={submittedVotes !== null}
@@ -170,6 +202,11 @@ export default function VotePage({ voteId }) {
                 >
                   ✗ {t('votePage.cant_attend')}
                 </button>
+                {isWinner && (
+                  <a href={slot.booking_link} className="find-book-btn" style={{ marginLeft: 'auto' }} target="_blank" rel="noopener noreferrer">
+                    {t('votePage.book_btn')}
+                  </a>
+                )}
               </div>
             </div>
           )
@@ -180,8 +217,8 @@ export default function VotePage({ voteId }) {
       <div style={{ marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center' }}>
         {submittedVotes === null ? (
           <button
-            className="find-book-btn"
-            style={{ padding: '8px 20px', fontSize: '0.875rem', opacity: (!voterName.trim() || !allAnswered) ? 0.5 : 1 }}
+            className="find-submit"
+            style={{ margin: 0, opacity: (!voterName.trim() || !allAnswered) ? 0.5 : 1 }}
             disabled={!voterName.trim() || !allAnswered || submitting}
             onClick={handleSubmitVotes}
           >
