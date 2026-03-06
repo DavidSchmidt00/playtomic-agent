@@ -16,7 +16,6 @@ from neonize.aioze.events import (
     LoggedOutEv,
     MessageEv,
     OfflineSyncCompletedEv,
-    event_global_loop,
 )
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
 from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
@@ -692,16 +691,18 @@ def main() -> None:
                         send_resp.ID,
                     )
 
-    # event_global_loop is a separate asyncio loop created by neonize that runs
-    # the connection task and dispatches async event handlers.  We must start it
-    # in a background thread before scheduling anything on it.
-    threading.Thread(target=event_global_loop.run_forever, daemon=True).start()
+    # In neonize >=0.3.15, event_global_loop is None at import time and is only
+    # populated inside connect() via set_event_loop(asyncio.get_running_loop()).
+    # We therefore create the event loop ourselves, start it in a background
+    # thread, and let connect() discover it via get_running_loop().
+    loop = asyncio.new_event_loop()
+    threading.Thread(target=loop.run_forever, daemon=True).start()
 
-    asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
+    asyncio.run_coroutine_threadsafe(client.connect(), loop).result()
 
     try:
-        asyncio.run_coroutine_threadsafe(client.idle(), event_global_loop).result()
+        asyncio.run_coroutine_threadsafe(client.idle(), loop).result()
     except KeyboardInterrupt:
         logger.info("WhatsApp agent stopped.")
     finally:
-        event_global_loop.call_soon_threadsafe(event_global_loop.stop)
+        loop.call_soon_threadsafe(loop.stop)
