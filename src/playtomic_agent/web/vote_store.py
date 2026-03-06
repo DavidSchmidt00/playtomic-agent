@@ -27,7 +27,7 @@ class VoteSlot(BaseModel):
     date: str  # YYYY-MM-DD
     local_time: str  # HH:MM
     court: str
-    court_type: str  # "SINGLE" | "DOUBLE"
+    court_type: str | None = None  # "SINGLE" | "DOUBLE"
     duration: int
     price: str
     booking_link: str
