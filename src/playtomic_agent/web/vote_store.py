@@ -61,10 +61,25 @@ class VoteStore:
                         vote_id TEXT NOT NULL,
                         voter_name TEXT NOT NULL,
                         slot_id TEXT NOT NULL,
-                        PRIMARY KEY (vote_id, voter_name),
+                        can_attend INTEGER NOT NULL DEFAULT 1,
+                        PRIMARY KEY (vote_id, voter_name, slot_id),
                         FOREIGN KEY (vote_id) REFERENCES vote_sessions(vote_id)
                     )
                 """)
+                # Migrate v1 → v2: add can_attend column (drop & recreate — votes are dev data)
+                cols = {row[1] for row in conn.execute("PRAGMA table_info(votes)").fetchall()}
+                if "can_attend" not in cols:
+                    conn.execute("DROP TABLE votes")
+                    conn.execute("""
+                        CREATE TABLE votes (
+                            vote_id TEXT NOT NULL,
+                            voter_name TEXT NOT NULL,
+                            slot_id TEXT NOT NULL,
+                            can_attend INTEGER NOT NULL DEFAULT 1,
+                            PRIMARY KEY (vote_id, voter_name, slot_id),
+                            FOREIGN KEY (vote_id) REFERENCES vote_sessions(vote_id)
+                        )
+                    """)
         finally:
             conn.close()
 
@@ -111,41 +126,47 @@ class VoteStore:
             slot_ids = {s["slot_id"] for s in slots}
 
             vote_rows = conn.execute(
-                "SELECT voter_name, slot_id FROM votes WHERE vote_id=?", (vote_id,)
+                "SELECT voter_name, slot_id, can_attend FROM votes WHERE vote_id=?", (vote_id,)
             ).fetchall()
         finally:
             conn.close()
 
         tally = dict.fromkeys(slot_ids, 0)
-        votes: dict[str, str] = {}
+        voters: set[str] = set()
         for vr in vote_rows:
-            votes[vr["voter_name"]] = vr["slot_id"]
-        for sid in votes.values():
-            if sid in tally:
-                tally[sid] += 1
+            voters.add(vr["voter_name"])
+            if vr["can_attend"]:
+                tally[vr["slot_id"]] += 1
 
         return {
             "vote_id": vote_id,
             "slots": slots,
             "tally": tally,
-            "voter_count": len(votes),
+            "voter_count": len(voters),
         }
 
-    def record_vote(self, vote_id: str, voter: str, slot_id: str) -> dict[str, Any]:
+    def record_vote(self, vote_id: str, voter: str, votes: dict[str, bool]) -> dict[str, Any]:
+        """Record per-slot availability for a voter.
+
+        ``votes`` maps slot_id → can_attend (True = can attend, False = cannot).
+        All existing votes for this voter in this session are replaced.
+        """
         session = self.get(vote_id)
         if session is None:
             raise SessionNotFoundError(f"Vote session {vote_id!r} not found or expired")
         slot_ids = {s["slot_id"] for s in session["slots"]}
-        if slot_id not in slot_ids:
-            raise InvalidSlotError(f"Invalid slot_id: {slot_id!r}")
+        for sid in votes:
+            if sid not in slot_ids:
+                raise InvalidSlotError(f"Invalid slot_id: {sid!r}")
         conn = self._connect()
         try:
             with conn:
-                conn.execute(
-                    """INSERT INTO votes (vote_id, voter_name, slot_id) VALUES (?,?,?)
-                       ON CONFLICT(vote_id, voter_name) DO UPDATE SET slot_id=excluded.slot_id""",
-                    (vote_id, voter, slot_id),
-                )
+                conn.execute("DELETE FROM votes WHERE vote_id=? AND voter_name=?", (vote_id, voter))
+                for sid, can_attend in votes.items():
+                    conn.execute(
+                        "INSERT INTO votes (vote_id, voter_name, slot_id, can_attend) VALUES (?,?,?,?)",
+                        (vote_id, voter, sid, int(can_attend)),
+                    )
         finally:
             conn.close()
         result = self.get(vote_id)

@@ -84,9 +84,14 @@ def test_get_vote_session_404():
     assert res.status_code == 404
 
 
+_VOTES_PAYLOAD = [{"slot_id": "s1", "can_attend": True}, {"slot_id": "s2", "can_attend": False}]
+
+
 def test_cast_vote_200():
     with _patched(_mock_store()):
-        res = client.post("/api/votes/testvote/vote", json={"voter_name": "Alice", "slot_id": "s1"})
+        res = client.post(
+            "/api/votes/testvote/vote", json={"voter_name": "Alice", "votes": _VOTES_PAYLOAD}
+        )
     assert res.status_code == 200
     data = res.json()
     assert data["tally"]["s1"] == 1
@@ -98,7 +103,8 @@ def test_cast_vote_invalid_slot_422():
     m.record_vote.side_effect = InvalidSlotError("Invalid slot_id")
     with _patched(m):
         res = client.post(
-            "/api/votes/testvote/vote", json={"voter_name": "Alice", "slot_id": "bad"}
+            "/api/votes/testvote/vote",
+            json={"voter_name": "Alice", "votes": [{"slot_id": "bad", "can_attend": True}]},
         )
     assert res.status_code == 422
 
@@ -107,11 +113,15 @@ def test_cast_vote_session_not_found_404():
     m = MagicMock()
     m.record_vote.side_effect = SessionNotFoundError("not found or expired")
     with _patched(m):
-        res = client.post("/api/votes/missing/vote", json={"voter_name": "Alice", "slot_id": "s1"})
+        res = client.post(
+            "/api/votes/missing/vote", json={"voter_name": "Alice", "votes": _VOTES_PAYLOAD}
+        )
     assert res.status_code == 404
 
 
 def test_cast_vote_blank_name_422():
     with _patched(_mock_store()):
-        res = client.post("/api/votes/testvote/vote", json={"voter_name": "   ", "slot_id": "s1"})
+        res = client.post(
+            "/api/votes/testvote/vote", json={"voter_name": "   ", "votes": _VOTES_PAYLOAD}
+        )
     assert res.status_code == 422

@@ -12,8 +12,9 @@ export default function VotePage({ voteId }) {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [voterName, setVoterName] = useState('')
-  const [myVote, setMyVote] = useState(null)
-  const [voting, setVoting] = useState(false)
+  const [pendingVotes, setPendingVotes] = useState({})   // {slot_id: true|false} before submit
+  const [submittedVotes, setSubmittedVotes] = useState(null) // {slot_id: bool} after submit
+  const [submitting, setSubmitting] = useState(false)
   const timerRef = useRef(null)
 
   const fetchSession = useCallback(async () => {
@@ -37,26 +38,37 @@ export default function VotePage({ voteId }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [fetchSession])
 
-  async function handleVote(slotId) {
-    if (!voterName.trim() || voting) return
-    setVoting(true)
+  async function handleSubmitVotes() {
+    if (!voterName.trim() || submitting) return
+    setSubmitting(true)
     try {
+      const votes = session.slots.map(s => ({
+        slot_id: s.slot_id,
+        can_attend: pendingVotes[s.slot_id] === true,
+      }))
       const res = await fetch(`/api/votes/${voteId}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voter_name: voterName.trim(), slot_id: slotId }),
+        body: JSON.stringify({ voter_name: voterName.trim(), votes }),
       })
       if (!res.ok) return
       const data = await res.json()
       setSession(prev => prev ? { ...prev, tally: data.tally, voter_count: data.voter_count } : prev)
-      setMyVote(slotId)
+      setSubmittedVotes({ ...pendingVotes })
     } finally {
-      setVoting(false)
+      setSubmitting(false)
     }
+  }
+
+  function handleChangeVote() {
+    setPendingVotes({ ...submittedVotes })
+    setSubmittedVotes(null)
   }
 
   if (loading) return <div className="find-container"><p className="find-summary">{t('votePage.loading')}</p></div>
   if (notFound) return <div className="find-container"><p className="find-error">{t('votePage.not_found')}</p></div>
+
+  const allAnswered = session?.slots.every(s => pendingVotes[s.slot_id] !== undefined)
 
   // Find winning slot (first to reach its threshold)
   const winner = session?.slots.find(s =>
@@ -81,8 +93,8 @@ export default function VotePage({ voteId }) {
         </div>
       )}
 
-      {/* Name input (shown until vote cast) */}
-      {!myVote && (
+      {/* Name input (shown until votes submitted) */}
+      {submittedVotes === null && (
         <div className="find-field" style={{ marginBottom: '14px' }}>
           <label>{t('votePage.your_name')}</label>
           <input
@@ -98,11 +110,12 @@ export default function VotePage({ voteId }) {
       {/* Slot list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {session?.slots.map(slot => {
-          const count = session.tally[slot.slot_id] || 0
+          const yesCount = session.tally[slot.slot_id] || 0
+          const total = session.voter_count
           const thresh = threshold(slot.court_type)
-          const pct = Math.min(100, Math.round((count / thresh) * 100))
-          const isMyVote = myVote === slot.slot_id
+          const pct = Math.min(100, Math.round((yesCount / thresh) * 100))
           const isWinner = winner?.slot_id === slot.slot_id
+          const myAnswer = submittedVotes !== null ? submittedVotes[slot.slot_id] : pendingVotes[slot.slot_id]
 
           return (
             <div
@@ -121,7 +134,7 @@ export default function VotePage({ voteId }) {
                 <span className="find-slot-meta">{slot.duration} min</span>
                 <span className="find-slot-price">{slot.price}</span>
                 <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                  {t('votePage.votes_other', { count })} / {thresh}
+                  {t('votePage.can_attend_count', { count: yesCount })}{total > 0 ? ` / ${total}` : ''}
                 </span>
               </div>
 
@@ -133,30 +146,59 @@ export default function VotePage({ voteId }) {
                 }} />
               </div>
 
-              {/* Action buttons */}
-              {isMyVote ? (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>{t('votePage.voted_label')}</span>
-                  <button
-                    className="suggestion-chip"
-                    onClick={() => setMyVote(null)}
-                  >
-                    {t('votePage.change_vote')}
-                  </button>
-                </div>
-              ) : (
+              {/* Can / Can't buttons */}
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
-                  className="find-book-btn"
-                  style={{ alignSelf: 'flex-start' }}
-                  disabled={!voterName.trim() || voting}
-                  onClick={() => handleVote(slot.slot_id)}
+                  style={{
+                    padding: '4px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                    border: `1px solid ${myAnswer === true ? 'rgba(34,197,94,0.7)' : 'var(--border-color)'}`,
+                    background: myAnswer === true ? 'rgba(34,197,94,0.15)' : 'var(--bg-surface-raised)',
+                    color: myAnswer === true ? 'rgb(134,239,172)' : 'var(--text-secondary)',
+                    fontWeight: myAnswer === true ? 600 : 400,
+                  }}
+                  disabled={submittedVotes !== null}
+                  onClick={() => setPendingVotes(prev => ({ ...prev, [slot.slot_id]: true }))}
                 >
-                  {t('votePage.vote_btn')}
+                  ✓ {t('votePage.can_attend')}
                 </button>
-              )}
+                <button
+                  style={{
+                    padding: '4px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                    border: `1px solid ${myAnswer === false ? 'rgba(239,68,68,0.7)' : 'var(--border-color)'}`,
+                    background: myAnswer === false ? 'rgba(239,68,68,0.12)' : 'var(--bg-surface-raised)',
+                    color: myAnswer === false ? 'rgb(252,165,165)' : 'var(--text-secondary)',
+                    fontWeight: myAnswer === false ? 600 : 400,
+                  }}
+                  disabled={submittedVotes !== null}
+                  onClick={() => setPendingVotes(prev => ({ ...prev, [slot.slot_id]: false }))}
+                >
+                  ✗ {t('votePage.cant_attend')}
+                </button>
+              </div>
             </div>
           )
         })}
+      </div>
+
+      {/* Submit / Change row */}
+      <div style={{ marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {submittedVotes === null ? (
+          <button
+            className="find-book-btn"
+            style={{ padding: '8px 20px', fontSize: '0.875rem', opacity: (!voterName.trim() || !allAnswered) ? 0.5 : 1 }}
+            disabled={!voterName.trim() || !allAnswered || submitting}
+            onClick={handleSubmitVotes}
+          >
+            {submitting ? t('votePage.submitting') : t('votePage.submit_btn')}
+          </button>
+        ) : (
+          <>
+            <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>{t('votePage.submitted_label')}</span>
+            <button className="suggestion-chip" onClick={handleChangeVote}>
+              {t('votePage.change_vote')}
+            </button>
+          </>
+        )}
       </div>
 
       <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '16px' }}>

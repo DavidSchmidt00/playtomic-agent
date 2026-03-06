@@ -118,9 +118,14 @@ class CreateVoteRequest(BaseModel):
     slots: list[_VoteSlot]
 
 
+class SlotVoteInput(BaseModel):
+    slot_id: str
+    can_attend: bool
+
+
 class CastVoteRequest(BaseModel):
     voter_name: str
-    slot_id: str
+    votes: list[SlotVoteInput]  # per-slot availability
 
     @field_validator("voter_name")
     @classmethod
@@ -484,9 +489,10 @@ async def get_vote_session(vote_id: str):
 
 @app.post("/api/votes/{vote_id}/vote")
 async def cast_vote(vote_id: str, req: CastVoteRequest):
-    """Record a voter's choice."""
+    """Record per-slot availability for a voter."""
+    votes_dict = {v.slot_id: v.can_attend for v in req.votes}
     try:
-        session = _get_vote_store().record_vote(vote_id, req.voter_name, req.slot_id)
+        session = _get_vote_store().record_vote(vote_id, req.voter_name, votes_dict)
     except _SessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except _InvalidSlotError as exc:

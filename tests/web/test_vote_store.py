@@ -56,20 +56,21 @@ def test_tally_starts_empty(store):
     assert session["tally"]["s1"] == 0
 
 
-def test_record_vote_updates_tally(store):
+def test_record_vote_counts_can_attend(store):
     vote_id = store.create([_SLOT_A, _SLOT_B])
-    store.record_vote(vote_id, "Alice", "s1")
-    store.record_vote(vote_id, "Bob", "s1")
-    store.record_vote(vote_id, "Carol", "s2")
+    store.record_vote(vote_id, "Alice", {"s1": True, "s2": False})
+    store.record_vote(vote_id, "Bob", {"s1": True, "s2": True})
+    store.record_vote(vote_id, "Carol", {"s1": False, "s2": True})
     session = store.get(vote_id)
-    assert session["tally"]["s1"] == 2
-    assert session["tally"]["s2"] == 1
+    assert session["tally"]["s1"] == 2  # Alice + Bob
+    assert session["tally"]["s2"] == 2  # Bob + Carol
+    assert session["voter_count"] == 3
 
 
-def test_record_vote_change_overwrites(store):
+def test_record_vote_replaces_previous(store):
     vote_id = store.create([_SLOT_A, _SLOT_B])
-    store.record_vote(vote_id, "Alice", "s1")
-    store.record_vote(vote_id, "Alice", "s2")  # change mind
+    store.record_vote(vote_id, "Alice", {"s1": True, "s2": False})
+    store.record_vote(vote_id, "Alice", {"s1": False, "s2": True})  # change mind
     session = store.get(vote_id)
     assert session["tally"]["s1"] == 0
     assert session["tally"]["s2"] == 1
@@ -79,12 +80,12 @@ def test_record_vote_change_overwrites(store):
 def test_record_vote_invalid_slot_raises(store):
     vote_id = store.create([_SLOT_A])
     with pytest.raises(ValueError, match="Invalid slot_id"):
-        store.record_vote(vote_id, "Alice", "bad-slot")
+        store.record_vote(vote_id, "Alice", {"bad-slot": True})
 
 
 def test_record_vote_session_not_found_raises(store):
     with pytest.raises(ValueError, match="not found or expired"):
-        store.record_vote("nobody", "Alice", "s1")
+        store.record_vote("nobody", "Alice", {"s1": True})
 
 
 def test_session_expires(store):
@@ -106,6 +107,6 @@ def test_session_expires(store):
 def test_persists_across_store_instances(tmp_path):
     path = tmp_path / "votes.db"
     vote_id = VoteStore(db_path=path).create([_SLOT_A])
-    VoteStore(db_path=path).record_vote(vote_id, "Alice", "s1")
+    VoteStore(db_path=path).record_vote(vote_id, "Alice", {"s1": True})
     session = VoteStore(db_path=path).get(vote_id)
     assert session["tally"]["s1"] == 1
