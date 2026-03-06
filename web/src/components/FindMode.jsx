@@ -541,8 +541,12 @@ export default function FindMode({ region, profile }) {
           {results.length > 0 && !voteMode && (
             <button
               type="button"
-              className="find-submit"
-              style={{ width: '100%', margin: '8px 0 4px' }}
+              style={{
+                width: '100%', margin: '8px 0 4px', padding: '0.55rem 1rem',
+                background: 'var(--bg-surface)', border: '1px solid rgba(6,182,212,0.4)',
+                borderRadius: 'var(--radius-sm)', color: 'var(--accent)',
+                fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+              }}
               onClick={handleOpenVoteMode}
             >
               {t('vote.start_btn')}
