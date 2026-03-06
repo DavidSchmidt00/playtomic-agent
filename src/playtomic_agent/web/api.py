@@ -21,10 +21,13 @@ from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.context import get_timezone, set_request_region
 from playtomic_agent.web.agent import create_playtomic_agent
+from playtomic_agent.web.vote_store import VoteSlot as _VoteSlot
+from playtomic_agent.web.vote_store import VoteStore
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Playtomic Agent API")
+_vote_store = VoteStore()
 
 # Setup Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -98,6 +101,27 @@ class SlotResult(BaseModel):
     duration: int
     price: str
     booking_link: str
+    court_type: str | None = None  # "SINGLE" | "DOUBLE" — propagated from SearchRequest
+
+
+class VoteSlotInput(BaseModel):
+    slot_id: str
+    date: str
+    local_time: str
+    court: str
+    court_type: str  # "SINGLE" | "DOUBLE"
+    duration: int
+    price: str
+    booking_link: str
+
+
+class CreateVoteRequest(BaseModel):
+    slots: list[VoteSlotInput]
+
+
+class CastVoteRequest(BaseModel):
+    voter_name: str
+    slot_id: str
 
 
 class SearchResponse(BaseModel):
@@ -419,6 +443,7 @@ async def search_slots(req: SearchRequest):
                                 duration=slot.duration,
                                 price=slot.price,
                                 booking_link=slot.get_link(),
+                                court_type=req.court_type,
                             )
                         )
     except ClubNotFoundError as exc:
@@ -432,6 +457,33 @@ async def search_slots(req: SearchRequest):
         total_count=len(results),
         dates_checked=len(dates_with_windows),
     )
+
+
+@app.post("/api/votes", status_code=201)
+async def create_vote_session(req: CreateVoteRequest):
+    """Create a shareable vote session from selected FindMode results."""
+    slots = [_VoteSlot(**s.model_dump()) for s in req.slots]
+    vote_id = _vote_store.create(slots)
+    return {"vote_id": vote_id, "url": f"/vote/{vote_id}"}
+
+
+@app.get("/api/votes/{vote_id}")
+async def get_vote_session(vote_id: str):
+    """Return current state of a vote session (slots + tally)."""
+    session = _vote_store.get(vote_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Vote session not found or expired.")
+    return session
+
+
+@app.post("/api/votes/{vote_id}/vote")
+async def cast_vote(vote_id: str, req: CastVoteRequest):
+    """Record a voter's choice."""
+    try:
+        session = _vote_store.record_vote(vote_id, req.voter_name.strip(), req.slot_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"tally": session["tally"], "voter_count": session["voter_count"]}
 
 
 # SPA catch-all — must be registered AFTER all /api/* routes so FastAPI's
