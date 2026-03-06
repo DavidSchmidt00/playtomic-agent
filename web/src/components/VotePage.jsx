@@ -127,19 +127,12 @@ export default function VotePage({ voteId }) {
                 <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                   {t('votePage.can_attend_count', { count: yesCount })}{total > 0 ? ` / ${total}` : ''}
                 </span>
-              </div>
-
-              {/* Consensus reached — show book button inline */}
-              {isWinner && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600 }}>
-                    🎉 {t('votePage.consensus_title')}
-                  </span>
-                  <a href={slot.booking_link} className="find-book-btn" style={{ padding: '3px 10px', fontSize: '0.8rem' }} target="_blank" rel="noopener noreferrer">
+                {isWinner && (
+                  <a href={slot.booking_link} className="find-book-btn" target="_blank" rel="noopener noreferrer">
                     {t('votePage.book_btn')}
                   </a>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Progress bar */}
               <div style={{ width: '100%', height: '4px', borderRadius: '2px', background: 'var(--border-color)' }}>
