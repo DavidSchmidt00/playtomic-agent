@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Chat from './components/Chat'
 import FindMode from './components/FindMode'
+import VotePage from './components/VotePage'
 import RegionSelector from './components/RegionSelector'
 import useRegion from './hooks/useRegion'
 import useProfile from './hooks/useProfile'
@@ -10,12 +11,22 @@ export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('padel-agent-theme') || 'dark'
   })
-  const modeFromPath = () => (window.location.pathname === '/find' ? 'find' : 'chat')
+  const modeFromPath = () => {
+    const p = window.location.pathname
+    if (p === '/find') return 'find'
+    if (p.startsWith('/vote/')) return 'vote'
+    return 'chat'
+  }
+  const voteIdFromPath = () => {
+    const m = window.location.pathname.match(/^\/vote\/([a-z0-9]{8})$/)
+    return m ? m[1] : null
+  }
   const [mode, setMode] = useState(modeFromPath)
+  const [voteId, setVoteId] = useState(voteIdFromPath)
 
   // Sync URL ↔ mode
   useEffect(() => {
-    const onPopState = () => setMode(modeFromPath())
+    const onPopState = () => { setMode(modeFromPath()); setVoteId(voteIdFromPath()) }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
@@ -81,6 +92,9 @@ export default function App() {
         </div>
         <div style={{ display: mode === 'find' ? 'contents' : 'none' }}>
           <FindMode region={region} profile={profile} />
+        </div>
+        <div style={{ display: mode === 'vote' ? 'contents' : 'none' }}>
+          {voteId && <VotePage voteId={voteId} />}
         </div>
       </main>
     </div>

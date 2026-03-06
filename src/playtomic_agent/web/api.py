@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -21,10 +21,23 @@ from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.context import get_timezone, set_request_region
 from playtomic_agent.web.agent import create_playtomic_agent
+from playtomic_agent.web.vote_store import InvalidSlotError as _InvalidSlotError
+from playtomic_agent.web.vote_store import SessionNotFoundError as _SessionNotFoundError
+from playtomic_agent.web.vote_store import VoteSlot as _VoteSlot
+from playtomic_agent.web.vote_store import VoteStore
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Playtomic Agent API")
+_vote_store: VoteStore | None = None
+
+
+def _get_vote_store() -> VoteStore:
+    global _vote_store
+    if _vote_store is None:
+        _vote_store = VoteStore()
+    return _vote_store
+
 
 # Setup Rate Limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -98,6 +111,29 @@ class SlotResult(BaseModel):
     duration: int
     price: str
     booking_link: str
+    court_type: str | None = None  # "SINGLE" | "DOUBLE" — propagated from SearchRequest
+
+
+class CreateVoteRequest(BaseModel):
+    slots: list[_VoteSlot]
+
+
+class SlotVoteInput(BaseModel):
+    slot_id: str
+    can_attend: bool
+
+
+class CastVoteRequest(BaseModel):
+    voter_name: str
+    votes: list[SlotVoteInput]  # per-slot availability
+
+    @field_validator("voter_name")
+    @classmethod
+    def voter_name_not_blank(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("voter_name must not be blank")
+        return stripped
 
 
 class SearchResponse(BaseModel):
@@ -419,6 +455,7 @@ async def search_slots(req: SearchRequest):
                                 duration=slot.duration,
                                 price=slot.price,
                                 booking_link=slot.get_link(),
+                                court_type=req.court_type,
                             )
                         )
     except ClubNotFoundError as exc:
@@ -432,6 +469,40 @@ async def search_slots(req: SearchRequest):
         total_count=len(results),
         dates_checked=len(dates_with_windows),
     )
+
+
+@app.post("/api/votes", status_code=201)
+async def create_vote_session(req: CreateVoteRequest):
+    """Create a shareable vote session from selected FindMode results."""
+    vote_id = _get_vote_store().create(req.slots)
+    return {"vote_id": vote_id, "url": f"/vote/{vote_id}"}
+
+
+@app.get("/api/votes/{vote_id}")
+async def get_vote_session(vote_id: str):
+    """Return current state of a vote session (slots + tally)."""
+    session = _get_vote_store().get(vote_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Vote session not found or expired.")
+    return session
+
+
+@app.post("/api/votes/{vote_id}/vote")
+async def cast_vote(vote_id: str, req: CastVoteRequest):
+    """Record per-slot availability for a voter."""
+    votes_dict = {v.slot_id: v.can_attend for v in req.votes}
+    try:
+        session = _get_vote_store().record_vote(vote_id, req.voter_name, votes_dict)
+    except _SessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except _InvalidSlotError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "tally": session["tally"],
+        "voter_count": session["voter_count"],
+        "voters": session["voters"],
+        "attendees": session["attendees"],
+    }
 
 
 # SPA catch-all — must be registered AFTER all /api/* routes so FastAPI's

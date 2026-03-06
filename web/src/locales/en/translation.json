@@ -88,5 +88,37 @@
         "save_preset_short": "+ Save",
         "save_preset_prompt": "Name for this preset:",
         "delete_preset": "Delete"
+    },
+    "vote": {
+        "start_btn": "Start Group Vote 🗳️",
+        "select_title": "Select slots to include in the vote",
+        "select_all": "All",
+        "select_none": "None",
+        "create_btn": "Create Vote Page",
+        "creating": "Creating…",
+        "share_label": "Share this link with your group:",
+        "copy_btn": "Copy link",
+        "copied": "Copied ✓",
+        "close_btn": "Close",
+        "error": "Could not create vote session. Please try again.",
+        "no_slots_selected": "Select at least one slot."
+    },
+    "votePage": {
+        "title": "Group Vote",
+        "your_name": "Your name",
+        "name_placeholder": "e.g. Anna",
+        "can_attend": "Can attend",
+        "cant_attend": "Can't attend",
+        "attendees": "Attendees",
+        "submit_btn": "Submit availability",
+        "submitting": "Saving…",
+        "submitted_label": "Availability saved ✓",
+        "change_vote": "Change",
+        "consensus_title": "Consensus reached! 🎉",
+        "consensus_body": "Book now before the slot disappears:",
+        "book_btn": "Book now →",
+        "loading": "Loading…",
+        "not_found": "This vote link has expired or doesn't exist.",
+        "expires_note": "This link expires the day after the last slot date."
     }
 }
