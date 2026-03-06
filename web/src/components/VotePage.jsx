@@ -70,9 +70,11 @@ export default function VotePage({ voteId }) {
 
   const allAnswered = session?.slots.every(s => pendingVotes[s.slot_id] !== undefined)
 
-  // Find winning slot (first to reach its threshold)
-  const winner = session?.slots.find(s =>
-    (session.tally[s.slot_id] || 0) >= threshold(s.court_type)
+  // Set of slot IDs that have reached their threshold
+  const winners = new Set(
+    session?.slots
+      .filter(s => (session.tally[s.slot_id] || 0) >= threshold(s.court_type))
+      .map(s => s.slot_id) ?? []
   )
 
   return (
@@ -81,17 +83,6 @@ export default function VotePage({ voteId }) {
       <p style={{ margin: '0 0 14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
         {t('votePage.tagline')}
       </p>
-
-      {/* Consensus banner */}
-      {winner && (
-        <div className="find-summary" style={{ marginBottom: '16px', background: 'var(--accent-subtle)', borderColor: 'rgba(6,182,212,0.4)' }}>
-          <strong>{t('votePage.consensus_title')}</strong><br />
-          <span style={{ fontSize: '0.85rem' }}>{t('votePage.consensus_body')}</span>{' '}
-          <a href={winner.booking_link} className="find-book-btn" target="_blank" rel="noopener noreferrer">
-            {t('votePage.book_btn')}
-          </a>
-        </div>
-      )}
 
       {/* Name input (shown until votes submitted) */}
       {submittedVotes === null && (
@@ -114,7 +105,7 @@ export default function VotePage({ voteId }) {
           const total = session.voter_count
           const thresh = threshold(slot.court_type)
           const pct = Math.min(100, Math.round((yesCount / thresh) * 100))
-          const isWinner = winner?.slot_id === slot.slot_id
+          const isWinner = winners.has(slot.slot_id)
           const myAnswer = submittedVotes !== null ? submittedVotes[slot.slot_id] : pendingVotes[slot.slot_id]
 
           return (
@@ -137,6 +128,18 @@ export default function VotePage({ voteId }) {
                   {t('votePage.can_attend_count', { count: yesCount })}{total > 0 ? ` / ${total}` : ''}
                 </span>
               </div>
+
+              {/* Consensus reached — show book button inline */}
+              {isWinner && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600 }}>
+                    🎉 {t('votePage.consensus_title')}
+                  </span>
+                  <a href={slot.booking_link} className="find-book-btn" style={{ padding: '3px 10px', fontSize: '0.8rem' }} target="_blank" rel="noopener noreferrer">
+                    {t('votePage.book_btn')}
+                  </a>
+                </div>
+              )}
 
               {/* Progress bar */}
               <div style={{ width: '100%', height: '4px', borderRadius: '2px', background: 'var(--border-color)' }}>
