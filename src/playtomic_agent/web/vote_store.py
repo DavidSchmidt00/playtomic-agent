@@ -118,17 +118,21 @@ class VoteStore:
             conn.close()
 
         tally = dict.fromkeys(slot_ids, 0)
+        attendees: dict[str, list[str]] = {sid: [] for sid in slot_ids}
         voters: set[str] = set()
         for vr in vote_rows:
             voters.add(vr["voter_name"])
             if vr["can_attend"]:
                 tally[vr["slot_id"]] += 1
+                attendees[vr["slot_id"]].append(vr["voter_name"])
 
         return {
             "vote_id": vote_id,
             "slots": slots,
             "tally": tally,
             "voter_count": len(voters),
+            "voters": sorted(voters),
+            "attendees": attendees,
         }
 
     def record_vote(self, vote_id: str, voter: str, votes: dict[str, bool]) -> dict[str, Any]:

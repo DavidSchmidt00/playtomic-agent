@@ -35,6 +35,8 @@ _MOCK_SESSION = {
     "slots": _SAMPLE_SLOTS,
     "tally": {"s1": 0, "s2": 0},
     "voter_count": 0,
+    "voters": [],
+    "attendees": {"s1": [], "s2": []},
 }
 
 

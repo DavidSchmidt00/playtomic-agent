@@ -497,7 +497,12 @@ async def cast_vote(vote_id: str, req: CastVoteRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except _InvalidSlotError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {"tally": session["tally"], "voter_count": session["voter_count"]}
+    return {
+        "tally": session["tally"],
+        "voter_count": session["voter_count"],
+        "voters": session["voters"],
+        "attendees": session["attendees"],
+    }
 
 
 # SPA catch-all — must be registered AFTER all /api/* routes so FastAPI's
