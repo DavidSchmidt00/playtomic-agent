@@ -231,12 +231,17 @@ export default function FindMode({ region, profile }) {
     }
   }
 
+  function slotKey(slot) {
+    return `${slot.date}_${slot.local_time}_${slot.court}`
+  }
+
   function handleOpenVoteMode() {
     const init = {}
-    results.forEach((_, i) => { init[`s${i}`] = true })
+    results.forEach(slot => { init[slotKey(slot)] = true })
     setSelected(init)
     setVoteUrl(null)
     setVoteError(null)
+    setVoteCopied(false)
     setVoteMode(true)
   }
 
@@ -249,7 +254,7 @@ export default function FindMode({ region, profile }) {
   }
 
   async function handleCreateVote() {
-    const slotsWithIds = results.map((slot, i) => ({ ...slot, slot_id: `s${i}` }))
+    const slotsWithIds = results.map(slot => ({ ...slot, slot_id: slotKey(slot) }))
     const chosenSlots = slotsWithIds.filter(s => selected[s.slot_id])
     if (chosenSlots.length === 0) {
       setVoteError(t('vote.no_slots_selected'))
@@ -556,8 +561,8 @@ export default function FindMode({ region, profile }) {
                     </div>
                   </div>
 
-                  {results.map((slot, i) => {
-                    const sid = `s${i}`
+                  {results.map((slot) => {
+                    const sid = slotKey(slot)
                     return (
                       <label key={sid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
                         <input

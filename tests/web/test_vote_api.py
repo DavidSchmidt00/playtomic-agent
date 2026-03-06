@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from playtomic_agent.web.api import app
+from playtomic_agent.web.vote_store import InvalidSlotError, SessionNotFoundError
 
 client = TestClient(app)
 
@@ -45,8 +46,13 @@ def _mock_store(vote_id="testvote", session=_MOCK_SESSION):
     return m
 
 
+def _patched(mock):
+    """Patch both _vote_store and _get_vote_store so lazy init returns the mock."""
+    return patch("playtomic_agent.web.api._vote_store", mock)
+
+
 def test_create_vote_session_201():
-    with patch("playtomic_agent.web.api._vote_store", _mock_store()):
+    with _patched(_mock_store()):
         res = client.post("/api/votes", json={"slots": _SAMPLE_SLOTS})
     assert res.status_code == 201
     data = res.json()
@@ -60,7 +66,7 @@ def test_create_vote_session_missing_slots():
 
 
 def test_get_vote_session_200():
-    with patch("playtomic_agent.web.api._vote_store", _mock_store()):
+    with _patched(_mock_store()):
         res = client.get("/api/votes/testvote")
     assert res.status_code == 200
     data = res.json()
@@ -73,13 +79,13 @@ def test_get_vote_session_200():
 def test_get_vote_session_404():
     m = MagicMock()
     m.get.return_value = None
-    with patch("playtomic_agent.web.api._vote_store", m):
+    with _patched(m):
         res = client.get("/api/votes/nosuchid")
     assert res.status_code == 404
 
 
 def test_cast_vote_200():
-    with patch("playtomic_agent.web.api._vote_store", _mock_store()):
+    with _patched(_mock_store()):
         res = client.post("/api/votes/testvote/vote", json={"voter_name": "Alice", "slot_id": "s1"})
     assert res.status_code == 200
     data = res.json()
@@ -87,19 +93,25 @@ def test_cast_vote_200():
     assert data["voter_count"] == 1
 
 
-def test_cast_vote_invalid_slot_404():
+def test_cast_vote_invalid_slot_422():
     m = MagicMock()
-    m.record_vote.side_effect = ValueError("Invalid slot_id")
-    with patch("playtomic_agent.web.api._vote_store", m):
+    m.record_vote.side_effect = InvalidSlotError("Invalid slot_id")
+    with _patched(m):
         res = client.post(
             "/api/votes/testvote/vote", json={"voter_name": "Alice", "slot_id": "bad"}
         )
-    assert res.status_code == 404
+    assert res.status_code == 422
 
 
 def test_cast_vote_session_not_found_404():
     m = MagicMock()
-    m.record_vote.side_effect = ValueError("not found or expired")
-    with patch("playtomic_agent.web.api._vote_store", m):
+    m.record_vote.side_effect = SessionNotFoundError("not found or expired")
+    with _patched(m):
         res = client.post("/api/votes/missing/vote", json={"voter_name": "Alice", "slot_id": "s1"})
     assert res.status_code == 404
+
+
+def test_cast_vote_blank_name_422():
+    with _patched(_mock_store()):
+        res = client.post("/api/votes/testvote/vote", json={"voter_name": "   ", "slot_id": "s1"})
+    assert res.status_code == 422

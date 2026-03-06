@@ -14,6 +14,14 @@ from pydantic import BaseModel
 _DEFAULT_DB = Path("data/votes.db")
 
 
+class SessionNotFoundError(ValueError):
+    """Raised when a vote session does not exist or has expired."""
+
+
+class InvalidSlotError(ValueError):
+    """Raised when the requested slot_id is not part of the session."""
+
+
 class VoteSlot(BaseModel):
     slot_id: str
     date: str  # YYYY-MM-DD
@@ -126,10 +134,10 @@ class VoteStore:
     def record_vote(self, vote_id: str, voter: str, slot_id: str) -> dict[str, Any]:
         session = self.get(vote_id)
         if session is None:
-            raise ValueError(f"Vote session {vote_id!r} not found or expired")
+            raise SessionNotFoundError(f"Vote session {vote_id!r} not found or expired")
         slot_ids = {s["slot_id"] for s in session["slots"]}
         if slot_id not in slot_ids:
-            raise ValueError(f"Invalid slot_id: {slot_id!r}")
+            raise InvalidSlotError(f"Invalid slot_id: {slot_id!r}")
         conn = self._connect()
         try:
             with conn:
@@ -140,4 +148,9 @@ class VoteStore:
                 )
         finally:
             conn.close()
-        return self.get(vote_id)  # type: ignore[return-value]
+        result = self.get(vote_id)
+        if result is None:
+            raise SessionNotFoundError(
+                f"Vote session {vote_id!r} expired immediately after recording"
+            )
+        return result

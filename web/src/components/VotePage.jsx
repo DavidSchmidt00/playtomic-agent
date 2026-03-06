@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // Court-type-aware consensus threshold
@@ -14,11 +14,16 @@ export default function VotePage({ voteId }) {
   const [voterName, setVoterName] = useState('')
   const [myVote, setMyVote] = useState(null)
   const [voting, setVoting] = useState(false)
+  const timerRef = useRef(null)
 
   const fetchSession = useCallback(async () => {
     try {
       const res = await fetch(`/api/votes/${voteId}`)
-      if (res.status === 404) { setNotFound(true); return }
+      if (res.status === 404) {
+        setNotFound(true)
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+        return
+      }
       if (!res.ok) return
       setSession(await res.json())
     } finally {
@@ -28,8 +33,8 @@ export default function VotePage({ voteId }) {
 
   useEffect(() => {
     fetchSession()
-    const timer = setInterval(fetchSession, 3000)
-    return () => clearInterval(timer)
+    timerRef.current = setInterval(fetchSession, 3000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [fetchSession])
 
   async function handleVote(slotId) {

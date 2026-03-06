@@ -118,6 +118,6 @@
         "book_btn": "Jetzt buchen →",
         "loading": "Lädt…",
         "not_found": "Dieser Abstimmungslink ist abgelaufen oder existiert nicht.",
-        "expires_note": "Dieser Link läuft nach 24 Stunden ab."
+        "expires_note": "Dieser Link läuft am Tag nach dem letzten Slot-Datum ab."
     }
 }

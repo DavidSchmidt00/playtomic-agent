@@ -118,6 +118,6 @@
         "book_btn": "Book now →",
         "loading": "Loading…",
         "not_found": "This vote link has expired or doesn't exist.",
-        "expires_note": "This link expires after 24 hours."
+        "expires_note": "This link expires the day after the last slot date."
     }
 }
