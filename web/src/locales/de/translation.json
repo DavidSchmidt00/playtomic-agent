@@ -88,5 +88,36 @@
         "save_preset_short": "+ Speichern",
         "save_preset_prompt": "Name für diese Vorlage:",
         "delete_preset": "Löschen"
+    },
+    "vote": {
+        "start_btn": "Gruppenabstimmung starten 🗳️",
+        "select_title": "Slots für die Abstimmung auswählen",
+        "select_all": "Alle",
+        "select_none": "Keine",
+        "create_btn": "Abstimmungsseite erstellen",
+        "creating": "Erstelle…",
+        "share_label": "Teile diesen Link mit deiner Gruppe:",
+        "copy_btn": "Link kopieren",
+        "copied": "Kopiert ✓",
+        "close_btn": "Schließen",
+        "error": "Abstimmung konnte nicht erstellt werden. Bitte versuche es erneut.",
+        "no_slots_selected": "Wähle mindestens einen Slot aus."
+    },
+    "votePage": {
+        "title": "Gruppenabstimmung",
+        "tagline": "Wähle den Slot, der dir passt",
+        "your_name": "Dein Name",
+        "name_placeholder": "z.B. Anna",
+        "vote_btn": "Abstimmen",
+        "change_vote": "Ändern",
+        "voted_label": "Du hast für diesen Slot abgestimmt ✓",
+        "votes_one": "{{count}} Stimme",
+        "votes_other": "{{count}} Stimmen",
+        "consensus_title": "Einigkeit erreicht! 🎉",
+        "consensus_body": "Jetzt buchen, bevor der Slot weg ist:",
+        "book_btn": "Jetzt buchen →",
+        "loading": "Lädt…",
+        "not_found": "Dieser Abstimmungslink ist abgelaufen oder existiert nicht.",
+        "expires_note": "Dieser Link läuft nach 24 Stunden ab."
     }
 }
