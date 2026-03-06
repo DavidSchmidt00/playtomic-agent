@@ -66,20 +66,6 @@ class VoteStore:
                         FOREIGN KEY (vote_id) REFERENCES vote_sessions(vote_id)
                     )
                 """)
-                # Migrate v1 → v2: add can_attend column (drop & recreate — votes are dev data)
-                cols = {row[1] for row in conn.execute("PRAGMA table_info(votes)").fetchall()}
-                if "can_attend" not in cols:
-                    conn.execute("DROP TABLE votes")
-                    conn.execute("""
-                        CREATE TABLE votes (
-                            vote_id TEXT NOT NULL,
-                            voter_name TEXT NOT NULL,
-                            slot_id TEXT NOT NULL,
-                            can_attend INTEGER NOT NULL DEFAULT 1,
-                            PRIMARY KEY (vote_id, voter_name, slot_id),
-                            FOREIGN KEY (vote_id) REFERENCES vote_sessions(vote_id)
-                        )
-                    """)
         finally:
             conn.close()
 
