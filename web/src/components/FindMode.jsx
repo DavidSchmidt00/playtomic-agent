@@ -274,7 +274,7 @@ export default function FindMode({ region, profile }) {
       const shareUrl = `${window.location.origin}/vote/${data.vote_id}`
       setVoteUrl(shareUrl)
       await navigator.clipboard.writeText(shareUrl).catch(() => {})
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {
       setVoteError(t('vote.error'))
     } finally {
