@@ -202,11 +202,15 @@ export default function VotePage({ voteId }) {
                 >
                   ✗ {t('votePage.cant_attend')}
                 </button>
-                {isWinner && (
-                  <a href={slot.booking_link} className="find-book-btn" style={{ marginLeft: 'auto' }} target="_blank" rel="noopener noreferrer">
-                    {t('votePage.book_btn')}
-                  </a>
-                )}
+                <a
+                  href={isWinner ? slot.booking_link : undefined}
+                  className="find-book-btn"
+                  style={{ marginLeft: 'auto', visibility: isWinner ? 'visible' : 'hidden', pointerEvents: isWinner ? 'auto' : 'none' }}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('votePage.book_btn')}
+                </a>
               </div>
             </div>
           )

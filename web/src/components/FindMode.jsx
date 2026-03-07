@@ -233,7 +233,7 @@ export default function FindMode({ region, profile }) {
   }
 
   function slotKey(slot) {
-    return `${slot.date}_${slot.local_time}_${slot.court}`
+    return `${slot.date}_${slot.local_time}_${slot.court}_${slot.duration}`
   }
 
   function handleOpenVoteMode() {
