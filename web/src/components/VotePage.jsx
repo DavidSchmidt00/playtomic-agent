@@ -183,6 +183,7 @@ export default function VotePage({ voteId }) {
                     background: myAnswer === true ? 'rgba(22,163,74,0.12)' : 'var(--bg-surface-raised)',
                     color: 'var(--text-primary)',
                     fontWeight: myAnswer === true ? 600 : 400,
+                    whiteSpace: 'nowrap',
                   }}
                   disabled={submittedVotes !== null}
                   onClick={() => setPendingVotes(prev => ({ ...prev, [slot.slot_id]: true }))}
@@ -196,6 +197,7 @@ export default function VotePage({ voteId }) {
                     background: myAnswer === false ? 'rgba(220,38,38,0.1)' : 'var(--bg-surface-raised)',
                     color: 'var(--text-primary)',
                     fontWeight: myAnswer === false ? 600 : 400,
+                    whiteSpace: 'nowrap',
                   }}
                   disabled={submittedVotes !== null}
                   onClick={() => setPendingVotes(prev => ({ ...prev, [slot.slot_id]: false }))}
