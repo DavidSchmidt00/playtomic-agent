@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 import random
-import threading
 from collections import defaultdict
 from typing import Any
 
@@ -16,7 +15,6 @@ from neonize.aioze.events import (
     LoggedOutEv,
     MessageEv,
     OfflineSyncCompletedEv,
-    event_global_loop,
 )
 from neonize.proto.Neonize_pb2 import ConnectFailureReason
 from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
@@ -404,8 +402,11 @@ def main() -> None:
             "No session found — switching to pairing code for %s…",
             settings.whatsapp_phone_number,
         )
-        await wa_client.disconnect()
-        await wa_client.PairPhone(settings.whatsapp_phone_number, True)
+        code = await wa_client.PairPhone(settings.whatsapp_phone_number, True)
+        logger.info("=" * 50)
+        logger.info("PAIRING CODE: %s", code)
+        logger.info("On your phone: WhatsApp → Linked Devices → Link with phone number")
+        logger.info("=" * 50)
 
     @client.event(JoinedGroupEv)
     async def on_joined_group(wa_client: NewAClient, event: JoinedGroupEv) -> None:
@@ -692,16 +693,11 @@ def main() -> None:
                         send_resp.ID,
                     )
 
-    # event_global_loop is a separate asyncio loop created by neonize that runs
-    # the connection task and dispatches async event handlers.  We must start it
-    # in a background thread before scheduling anything on it.
-    threading.Thread(target=event_global_loop.run_forever, daemon=True).start()
-
-    asyncio.run_coroutine_threadsafe(client.connect(), event_global_loop).result()
+    async def _run() -> None:
+        await client.connect()
+        await client.idle()
 
     try:
-        asyncio.run_coroutine_threadsafe(client.idle(), event_global_loop).result()
+        asyncio.run(_run())
     except KeyboardInterrupt:
         logger.info("WhatsApp agent stopped.")
-    finally:
-        event_global_loop.call_soon_threadsafe(event_global_loop.stop)
