@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import random
+import uuid
 from collections import defaultdict
 from typing import Any
 
@@ -29,6 +30,7 @@ from playtomic_agent.whatsapp.agent import (
     extract_message_parts,
     extract_poll_data,
     extract_preference_updates,
+    extract_vote_link_data,
 )
 from playtomic_agent.whatsapp.storage import UserStorage
 
@@ -689,6 +691,32 @@ def main() -> None:
                         len(display_options),
                         send_resp.ID,
                     )
+
+                vote_data = extract_vote_link_data(result)
+                if vote_data:
+                    vote_slots_meta: list[dict] = vote_data.get("slots", [])
+                    question = str(vote_data["question"])
+                    court_type = str(vote_data.get("court_type", "DOUBLE"))
+                    if len(vote_slots_meta) >= 2:
+                        vote_id = str(uuid.uuid4())
+                        user_state.active_poll = {
+                            "vote_id": vote_id,
+                            "question": question,
+                            "court_type": court_type,
+                            "options": [
+                                {
+                                    "display": s.get("display", ""),
+                                    "booking_link": s.get("booking_link", ""),
+                                    "voters": [],
+                                }
+                                for s in vote_slots_meta
+                            ],
+                        }
+                        storage.save(sender_id, user_state)
+                        vote_url = f"https://padelagent.de/vote/{vote_id}"
+                        vote_msg = f"🗳️ *{question}*\n\nHier abstimmen:\n{vote_url}"
+                        await _send_text(wa_client, sender_jid, vote_msg)
+                        logger.info("Vote link sent to %s (vote_id=%s)", sender_id, vote_id)
 
     async def _run() -> None:
         await client.connect()
