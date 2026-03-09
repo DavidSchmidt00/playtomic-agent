@@ -129,7 +129,7 @@ def _build_system_prompt(
         else f"call `{voting_tool}`"
     )
     voting_mechanic = (
-        "once 4 people pick the same slot, I'll send the booking link!"
+        "once enough people pick the same slot (2 for singles, 4 for doubles), I'll send the booking link!"
         if poll_count < poll_threshold
         else "Click the link to vote"
     )

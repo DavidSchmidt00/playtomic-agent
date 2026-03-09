@@ -532,9 +532,7 @@ async def cast_vote(vote_id: str, req: CastVoteRequest, background_tasks: Backgr
                         "booking_link": slot_info.get("booking_link"),
                         "voter_count": count,
                     }
-                    background_tasks.add_task(
-                        asyncio.to_thread, _fire_webhook, webhook_url, payload
-                    )
+                    background_tasks.add_task(_fire_webhook, webhook_url, payload)
 
     return {
         "tally": session["tally"],

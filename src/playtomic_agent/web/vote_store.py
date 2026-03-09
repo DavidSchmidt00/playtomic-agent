@@ -58,16 +58,18 @@ class VoteStore:
                         notified_slots TEXT DEFAULT '[]'
                     )
                 """)
-                # Handle migrations for existing DB
-                try:
-                    conn.execute(
-                        "ALTER TABLE vote_sessions ADD COLUMN metadata_json TEXT DEFAULT '{}'"
-                    )
-                    conn.execute(
-                        "ALTER TABLE vote_sessions ADD COLUMN notified_slots TEXT DEFAULT '[]'"
-                    )
-                except sqlite3.OperationalError:
-                    pass
+                # Handle migrations for existing DB — suppress only "duplicate column name"
+                for col, default in [
+                    ("metadata_json", "'{}'"),
+                    ("notified_slots", "'[]'"),
+                ]:
+                    try:
+                        conn.execute(
+                            f"ALTER TABLE vote_sessions ADD COLUMN {col} TEXT DEFAULT {default}"
+                        )
+                    except sqlite3.OperationalError as exc:
+                        if "duplicate column name" not in str(exc):
+                            raise
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS votes (
                         vote_id TEXT NOT NULL,

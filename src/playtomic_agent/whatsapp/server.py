@@ -38,16 +38,19 @@ from playtomic_agent.whatsapp.storage import UserStorage
 
 logger = logging.getLogger(__name__)
 
-_GROUP_INTRO = (
-    "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
-    "Playtomic zu finden. 🎾\n\n"
-    "So funktioniert's:\n"
-    "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
-    "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
-    "* Suche Doppel-Courts in Berlin am Samstag\n"
-    "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
-    "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
-)
+
+def _group_intro() -> str:
+    return (
+        "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
+        "Playtomic zu finden. 🎾\n\n"
+        "So funktioniert's:\n"
+        "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
+        "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+        "* Suche Doppel-Courts in Berlin am Samstag\n"
+        "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
+        f"Übrigens: Mich gibts auch auf {get_settings().web_public_base_url} 🌐"
+    )
+
 
 webhook_app = FastAPI(title="WhatsApp Webhook Receiver")
 
@@ -62,13 +65,19 @@ async def consensus_webhook(req: Request):
     vote_id = data.get("vote_id")
 
     wa_client = getattr(webhook_app.state, "wa_client", None)
-    if wa_client and group_jid and display:
-        msg = f"🎉 *Buchungs-Empfehlung erreicht!*\n\n{voter_count} Leute haben für diesen Slot abgestimmt:\n*{display}*\n\nZeit, den Court zu buchen! 🎾"
+    neonize_loop = getattr(webhook_app.state, "neonize_loop", None)
+    if wa_client and neonize_loop and group_jid and display:
+        msg = (
+            f"🎉 *Buchungs-Empfehlung erreicht!*\n\n"
+            f"{voter_count} Leute haben für diesen Slot abgestimmt:\n*{display}*\n\n"
+            "Zeit, den Court zu buchen! 🎾"
+        )
         if data.get("booking_link"):
             msg += f"\n👉 {data.get('booking_link')}"
 
-        # Dispatch to WA client
-        asyncio.create_task(_send_text(wa_client, group_jid, msg))
+        # _send_text is a coroutine on the neonize event loop — dispatch safely
+        # across the loop boundary from uvicorn's loop.
+        asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
         logger.info("Sent consensus webhook notification to %s for vote %s", group_jid, vote_id)
 
     return {"status": "ok"}
@@ -443,7 +452,7 @@ def main() -> None:
             event.Reason,
             event.Type,
         )
-        await _send_text(wa_client, group_jid, _GROUP_INTRO)
+        await _send_text(wa_client, group_jid, _group_intro())
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
@@ -779,6 +788,7 @@ def main() -> None:
 
     async def _run() -> None:
         webhook_app.state.wa_client = client
+        webhook_app.state.neonize_loop = asyncio.get_running_loop()
         config = uvicorn.Config(
             webhook_app,
             port=get_settings().whatsapp_webhook_port,

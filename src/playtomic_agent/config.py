@@ -124,7 +124,7 @@ class Settings(BaseSettings):
 
     # Web/WhatsApp Integration
     web_api_url: str = Field(
-        default="http://localhost:8080",
+        default="http://localhost:8082",
         alias="WEB_API_URL",
         description="URL of the Web API backend.",
     )
