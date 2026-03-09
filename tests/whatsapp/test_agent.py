@@ -7,11 +7,13 @@ from playtomic_agent.whatsapp.agent import (
     extract_final_text,
     extract_poll_data,
     extract_preference_updates,
+    extract_vote_link_data,
     send_poll,
+    send_vote_link,
 )
 
 # ---------------------------------------------------------------------------
-# send_poll tool
+# send_poll tool & send_vote_link tool
 # ---------------------------------------------------------------------------
 
 _SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90 min", "booking_link": "https://x"}
@@ -50,6 +52,40 @@ def test_send_poll_limits_to_12():
     ]
     result = send_poll.invoke({"question": "Pick?", "slots": slots})
     assert len(result["wa_poll"]["slots"]) == 12
+
+
+def test_send_vote_link_returns_wa_vote_link():
+    slots = [_SLOT_A, _SLOT_B]
+    result = send_vote_link.invoke({"question": "Welcher Slot?", "slots": slots})
+    assert "wa_vote_link" in result
+    assert result["wa_vote_link"]["question"] == "Welcher Slot?"
+    assert result["wa_vote_link"]["slots"] == slots
+
+
+def test_send_vote_link_default_court_type_is_double():
+    result = send_vote_link.invoke({"question": "Slot?", "slots": [_SLOT_A, _SLOT_B]})
+    assert result["wa_vote_link"]["court_type"] == "DOUBLE"
+
+
+def test_send_vote_link_single_court_type():
+    result = send_vote_link.invoke(
+        {"question": "Slot?", "slots": [_SLOT_A, _SLOT_B], "court_type": "SINGLE"}
+    )
+    assert result["wa_vote_link"]["court_type"] == "SINGLE"
+
+
+def test_send_vote_link_rejects_fewer_than_2_slots():
+    result = send_vote_link.invoke({"question": "Slot?", "slots": [_SLOT_A]})
+    assert "error" in result
+    assert "wa_vote_link" not in result
+
+
+def test_send_vote_link_limits_to_12():
+    slots = [
+        {"display": f"Mo | 01.03 | {i:02d}:00 | 60 min", "booking_link": ""} for i in range(15)
+    ]
+    result = send_vote_link.invoke({"question": "Pick?", "slots": slots})
+    assert len(result["wa_vote_link"]["slots"]) == 12
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +163,23 @@ def test_extract_poll_data_finds_wa_poll():
 def test_extract_poll_data_returns_none_when_absent():
     result = {"messages": [_make_tool_msg("find_slots", {"count": 0, "slots": []})]}
     assert extract_poll_data(result) is None
+
+
+def test_extract_vote_link_data_finds_wa_vote_link():
+    vote_link_payload = {
+        "wa_vote_link": {"question": "Welcher Slot?", "slots": [_SLOT_A], "court_type": "DOUBLE"}
+    }
+    result = {"messages": [_make_tool_msg("send_vote_link", vote_link_payload)]}
+    vote_data = extract_vote_link_data(result)
+    assert vote_data is not None
+    assert vote_data["question"] == "Welcher Slot?"
+    assert vote_data["slots"] == [_SLOT_A]
+    assert vote_data["court_type"] == "DOUBLE"
+
+
+def test_extract_vote_link_data_returns_none_when_absent():
+    result = {"messages": [_make_tool_msg("find_slots", {"count": 0, "slots": []})]}
+    assert extract_vote_link_data(result) is None
 
 
 # ---------------------------------------------------------------------------

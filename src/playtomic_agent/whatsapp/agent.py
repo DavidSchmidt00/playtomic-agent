@@ -55,6 +55,26 @@ def send_poll(
     return {"wa_poll": {"question": question, "slots": slots[:12], "court_type": court_type}}
 
 
+@tool(description="Present slot options as a shareable web voting link. Only use in groups.")
+def send_vote_link(
+    question: Annotated[str, "Short poll question, e.g. 'Welcher Slot passt euch?'"],
+    slots: Annotated[
+        list[dict],
+        "List of slot dicts from find_slots. Each MUST have 'display' and 'booking_link'. Max 12.",
+    ],
+    court_type: Annotated[
+        str,
+        "'SINGLE' for 1v1 courts (threshold: 2 votes) or 'DOUBLE' for 2v2 courts (threshold: 4 votes). Default: 'DOUBLE'.",
+    ] = "DOUBLE",
+) -> Annotated[dict, "Web vote link payload to generate a URL."]:
+    """Sends a web voting link. Slot display labels come pre-formatted from find_slots."""
+    if len(slots) < 2:
+        return {
+            "error": "Voting links require at least 2 options. List the single slot as text instead."
+        }
+    return {"wa_vote_link": {"question": question, "slots": slots[:12], "court_type": court_type}}
+
+
 WA_TOOLS = [
     find_slots,
     find_slots_date_range,
@@ -65,6 +85,7 @@ WA_TOOLS = [
     update_user_profile,
     send_messages,
     send_poll,
+    send_vote_link,
 ]
 
 
@@ -219,6 +240,16 @@ def extract_poll_data(result: dict) -> "dict[str, Any] | None":
         wa_poll = payload.get("wa_poll")
         if isinstance(wa_poll, dict):
             return wa_poll
+    return None
+
+
+def extract_vote_link_data(result: dict) -> "dict[str, Any] | None":
+    """Scan tool messages for a wa_vote_link payload from send_vote_link."""
+    payload = _extract_tool_message(result, send_vote_link.name)
+    if payload:
+        wa_vote_link = payload.get("wa_vote_link")
+        if isinstance(wa_vote_link, dict):
+            return wa_vote_link
     return None
 
 
