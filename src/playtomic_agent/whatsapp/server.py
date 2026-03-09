@@ -537,6 +537,7 @@ def main() -> None:
                 user_profile=user_state.profile,
                 language=user_state.language,
                 is_group=is_group,
+                poll_count=getattr(user_state, "poll_count", 0),
             )
 
             async def _keep_typing(stop: asyncio.Event) -> None:
