@@ -23,7 +23,7 @@ class InvalidSlotError(ValueError):
 
 
 class VoteSlot(BaseModel):
-    slot_id: str
+    slot_id: str = ""
     date: str  # YYYY-MM-DD
     local_time: str  # HH:MM
     court: str
@@ -88,6 +88,9 @@ class VoteStore:
         return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
     def create(self, slots: list[VoteSlot], metadata: dict | None = None) -> str:
+        for s in slots:
+            if not s.slot_id:
+                s.slot_id = f"{s.date}_{s.local_time}_{s.court}_{s.duration}"
         vote_id = self._new_id()
         conn = self._connect()
         try:

@@ -255,8 +255,7 @@ export default function FindMode({ region, profile }) {
   }
 
   async function handleCreateVote() {
-    const slotsWithIds = results.map(slot => ({ ...slot, slot_id: slotKey(slot) }))
-    const chosenSlots = slotsWithIds.filter(s => selected[s.slot_id])
+    const chosenSlots = results.filter(s => selected[slotKey(s)])
     if (chosenSlots.length === 0) {
       setVoteError(t('vote.no_slots_selected'))
       return
