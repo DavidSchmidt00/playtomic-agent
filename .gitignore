@@ -225,3 +225,7 @@ web/node_modules/
 web/dist/
 web/.vite/
 npm-debug.log*
+.claude
+data
+docs/plans
+docs/product
