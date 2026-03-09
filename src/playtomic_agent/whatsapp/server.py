@@ -27,14 +27,13 @@ from neonize.utils.message import extract_text, get_poll_update_message
 from playtomic_agent.config import get_settings
 from playtomic_agent.log_config import setup_logging
 from playtomic_agent.whatsapp.agent import (
+    WAResponse,
     create_whatsapp_agent,
     extract_final_text,
-    extract_message_parts,
-    extract_poll_data,
-    extract_preference_updates,
-    extract_vote_link_data,
+    extract_response,
+    set_wa_invocation_state,
 )
-from playtomic_agent.whatsapp.storage import UserStorage
+from playtomic_agent.whatsapp.storage import UserState, UserStorage
 
 logger = logging.getLogger(__name__)
 
@@ -333,21 +332,146 @@ async def _notify_booking_threshold(
     logger.info("Booking threshold notification sent for '%s'", display)
 
 
+async def _dispatch_wa_response(
+    wa_client: NewAClient,
+    sender_jid: Any,
+    sender_id: str,
+    response: WAResponse,
+    user_state: UserState,
+    storage: UserStorage,
+    is_group: bool,
+) -> None:
+    """Send text parts then dispatch poll or vote link (groups only)."""
+    # --- Text parts ---
+    parts = [p for p in response.text_parts if p]
+    for i, part in enumerate(parts):
+        if i > 0:
+            await _send_text(wa_client, sender_jid, part)
+        else:
+            # Part 0: keep-typing was already active during agent invoke,
+            # so skip the double typing indicator from _send_text.
+            await wa_client.send_message(sender_jid, part)
+    if parts:
+        logger.info("Replied to %s (%d message(s))", sender_id, len(parts))
+
+    if not is_group:
+        return
+
+    # --- Poll dispatch ---
+    if response.poll is not None:
+        poll = response.poll
+        display_options = [s.get("display", "") for s in poll.slots]
+        if len(display_options) < 2:
+            logger.warning("respond.poll has <2 options — skipping poll send")
+        else:
+            poll_msg = await wa_client.build_poll_vote_creation(
+                name=poll.question,
+                options=display_options,
+                selectable_count=VoteType.MULTIPLE,
+            )
+            send_resp = await wa_client.send_message(sender_jid, poll_msg)
+            user_state.active_poll = {
+                "message_id": send_resp.ID,
+                "question": poll.question,
+                "court_type": poll.court_type,
+                "options": [
+                    {
+                        "display": s.get("display", ""),
+                        "booking_link": s.get("booking_link", ""),
+                        "voters": [],
+                    }
+                    for s in poll.slots
+                ],
+            }
+            user_state.poll_count += 1
+            storage.save(sender_id, user_state)
+            logger.info(
+                "Poll sent to group %s (%d options, id=%s)",
+                sender_id,
+                len(display_options),
+                send_resp.ID,
+            )
+
+    # --- Vote link dispatch ---
+    elif response.vote_link is not None:
+        vl = response.vote_link
+        if len(vl.slots) < 2:
+            logger.warning("respond.vote_link has <2 options — skipping")
+            return
+        threshold = 2 if vl.court_type == "SINGLE" else 4
+        payload = {
+            "slots": vl.slots,
+            "metadata": {
+                "group_jid": str(sender_jid),
+                "threshold": threshold,
+            },
+        }
+        resp = None
+        try:
+            resp = await asyncio.to_thread(
+                requests.post,
+                f"{get_settings().web_api_url}/api/votes",
+                json=payload,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            vote_id = resp.json().get("vote_id")
+            user_state.active_poll = {
+                "vote_id": vote_id,
+                "question": vl.question,
+                "court_type": vl.court_type,
+                "options": [
+                    {
+                        "display": s.get("display", ""),
+                        "booking_link": s.get("booking_link", ""),
+                        "voters": [],
+                    }
+                    for s in vl.slots
+                ],
+            }
+            storage.save(sender_id, user_state)
+            vote_url = f"{get_settings().web_public_base_url}/vote/{vote_id}"
+            vote_msg = f"🗳️ *{vl.question}*\n\nHier abstimmen:\n{vote_url}"
+            await _send_text(wa_client, sender_jid, vote_msg)
+            user_state.poll_count += 1
+            storage.save(sender_id, user_state)
+            logger.info(
+                "Vote link created via Web API and sent to %s (vote_id=%s)",
+                sender_id,
+                vote_id,
+            )
+        except Exception as exc:
+            if resp is not None and not resp.ok:
+                logger.error(
+                    "Web API rejected vote creation: %s — %s",
+                    resp.status_code,
+                    resp.text,
+                )
+            logger.error("Failed to create web vote via API: %s", exc)
+            await _send_text(
+                wa_client,
+                sender_jid,
+                "Entschuldigung, beim Erstellen der Web-Abstimmung ist ein Fehler aufgetreten. "
+                "Bitte versuche es später noch einmal.",
+            )
+
+
 def main() -> None:
     """Entry point for the whatsapp-agent command."""
     setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 
     settings = get_settings()
     if settings.whatsapp_clear_storage_on_start:
-        try:
-            os.remove(settings.whatsapp_storage_path)
-            logger.info(
-                "Cleared user storage at %s (WHATSAPP_CLEAR_STORAGE_ON_START)",
-                settings.whatsapp_storage_path,
-            )
-        except FileNotFoundError:
-            pass
-    storage = UserStorage(settings.whatsapp_storage_path)
+        for suffix in ("", "-wal", "-shm"):
+            try:
+                os.remove(settings.whatsapp_db_path + suffix)
+            except FileNotFoundError:
+                pass
+        logger.info(
+            "Cleared user storage at %s (WHATSAPP_CLEAR_STORAGE_ON_START)",
+            settings.whatsapp_db_path,
+        )
+    storage = UserStorage(settings.whatsapp_db_path)
     _platform_name = settings.whatsapp_device_platform.upper()
     _platform_int = getattr(DeviceProps, _platform_name, None)
     if _platform_int is None:
@@ -578,6 +702,10 @@ def main() -> None:
                 poll_threshold=settings.vote_link_poll_threshold,
             )
 
+            # Inject live UserState so the WA update_user_profile tool can mutate it
+            # directly via ContextVar — asyncio.to_thread copies the current context.
+            set_wa_invocation_state(user_state)
+
             async def _keep_typing(stop: asyncio.Event) -> None:
                 while not stop.is_set():
                     try:
@@ -597,6 +725,7 @@ def main() -> None:
             typing_task = asyncio.create_task(_keep_typing(stop_typing))
             result = None
             timed_out = False
+            wa_response: WAResponse | None = None
             final_text = ""
             try:
                 result = await asyncio.wait_for(
@@ -607,16 +736,11 @@ def main() -> None:
                     ),
                     timeout=settings.agent_timeout_seconds,
                 )
-                # Cache final_text here so we can use it for the pre-send delay
-                # and later for history — avoiding a second scan of result["messages"].
-                # Fall back to the first send_messages part when the agent used that
-                # tool instead of returning a plain final text.
+                wa_response = extract_response(result) if result is not None else None
                 final_text = extract_final_text(result) if result is not None else ""
-                _delay_text = final_text
-                if not _delay_text and result is not None:
-                    _first_parts = extract_message_parts(result)
-                    if _first_parts:
-                        _delay_text = _first_parts[0]
+                _delay_text = (
+                    wa_response.text_parts[0] if wa_response and wa_response.text_parts else ""
+                ) or final_text
                 if _delay_text:
                     _delay = _compute_send_delay(_delay_text, settings.whatsapp_send_delay_wpm)
                     if _delay > 0:
@@ -661,136 +785,23 @@ def main() -> None:
                 await wa_client.send_message(sender_jid, msg)
                 return
 
-            prefs = extract_preference_updates(result)
-
-            if prefs:
-                if detected_lang := prefs.pop("language", None):
-                    user_state.language = detected_lang
-                user_state.profile.update(prefs)
-                logger.info("Updated profile for %s: %s", sender_id, prefs)
-
-            parts = extract_message_parts(result)
-            if not parts:
-                parts = [final_text] if final_text else []
-            user_state.history = (
-                messages + [{"role": "assistant", "content": "\n\n".join(parts)}]
-            )[-20:]
+            # Profile updates were applied in-place by the WA update_user_profile tool
+            # via _wa_state_ctx — no post-hoc extraction needed.
+            history_text = (
+                "\n\n".join(wa_response.text_parts)
+                if wa_response and wa_response.text_parts
+                else final_text
+            )
+            user_state.history = (messages + [{"role": "assistant", "content": history_text}])[-20:]
             storage.save(sender_id, user_state)
 
-            # Send text parts first, then poll (text provides context for the poll).
-            # Part 0 is sent raw: the keep-typing task already holds COMPOSING during
-            # the pre-send delay above, so _send_text would cause a presence flicker.
-            # Parts 1+ each need their own typing indicator via _send_text.
-            for i, part in enumerate(parts):
-                if i > 0:
-                    await _send_text(wa_client, sender_jid, part)
-                else:
-                    await wa_client.send_message(sender_jid, part)
-            if parts:
-                logger.info("Replied to %s (%d message(s))", sender_id, len(parts))
-
-            if is_group:
-                poll_data = extract_poll_data(result)
-                if poll_data:
-                    slots_meta: list[dict] = poll_data.get("slots", [])
-                    question = str(poll_data["question"])
-                    court_type = str(poll_data.get("court_type", "DOUBLE"))
-                    display_options = [s.get("display", "") for s in slots_meta]
-                    if len(display_options) < 2:
-                        logger.warning("send_poll called with <2 options — skipping poll send")
-                        display_options = []
-                        poll_data = None
-                if poll_data:
-                    poll_msg = await wa_client.build_poll_vote_creation(
-                        name=question,
-                        options=display_options,
-                        selectable_count=VoteType.MULTIPLE,
-                    )
-                    send_resp = await wa_client.send_message(sender_jid, poll_msg)
-                    user_state.active_poll = {
-                        "message_id": send_resp.ID,
-                        "question": question,
-                        "court_type": court_type,
-                        "options": [
-                            {
-                                "display": s.get("display", ""),
-                                "booking_link": s.get("booking_link", ""),
-                                "voters": [],
-                            }
-                            for s in slots_meta
-                        ],
-                    }
-                    user_state.poll_count += 1
-                    storage.save(sender_id, user_state)
-                    logger.info(
-                        "Poll sent to group %s (%d options, id=%s)",
-                        sender_id,
-                        len(display_options),
-                        send_resp.ID,
-                    )
-
-                vote_data = extract_vote_link_data(result)
-                if vote_data:
-                    vote_slots_meta: list[dict] = vote_data.get("slots", [])
-                    question = str(vote_data["question"])
-                    court_type = str(vote_data.get("court_type", "DOUBLE"))
-                    if len(vote_slots_meta) >= 2:
-                        threshold = 2 if court_type == "SINGLE" else 4
-                        payload = {
-                            "slots": vote_slots_meta,
-                            "metadata": {
-                                "group_jid": str(sender_jid),
-                                "threshold": threshold,
-                            },
-                        }
-                        try:
-                            resp = await asyncio.to_thread(
-                                requests.post,
-                                f"{get_settings().web_api_url}/api/votes",
-                                json=payload,
-                                timeout=10,
-                            )
-                            if not resp.ok:
-                                logger.error(
-                                    "Web API rejected vote creation: %s — %s",
-                                    resp.status_code,
-                                    resp.text,
-                                )
-                            resp.raise_for_status()
-                            vote_id = resp.json().get("vote_id")
-
-                            user_state.active_poll = {
-                                "vote_id": vote_id,
-                                "question": question,
-                                "court_type": court_type,
-                                "options": [
-                                    {
-                                        "display": s.get("display", ""),
-                                        "booking_link": s.get("booking_link", ""),
-                                        "voters": [],
-                                    }
-                                    for s in vote_slots_meta
-                                ],
-                            }
-                            storage.save(sender_id, user_state)
-                            vote_url = f"{get_settings().web_public_base_url}/vote/{vote_id}"
-
-                            vote_msg = f"🗳️ *{question}*\n\nHier abstimmen:\n{vote_url}"
-                            await _send_text(wa_client, sender_jid, vote_msg)
-                            user_state.poll_count += 1
-                            storage.save(sender_id, user_state)
-                            logger.info(
-                                "Vote link created via Web API and sent to %s (vote_id=%s)",
-                                sender_id,
-                                vote_id,
-                            )
-                        except Exception as exc:
-                            logger.error("Failed to create web vote via API: %s", exc)
-                            await _send_text(
-                                wa_client,
-                                sender_jid,
-                                "Entschuldigung, beim Erstellen der Web-Abstimmung ist ein Fehler aufgetreten. Bitte versuche es später noch einmal.",
-                            )
+            if wa_response:
+                await _dispatch_wa_response(
+                    wa_client, sender_jid, sender_id, wa_response, user_state, storage, is_group
+                )
+            elif final_text:
+                await wa_client.send_message(sender_jid, final_text)
+                logger.info("Replied to %s (fallback final_text)", sender_id)
 
     async def _run() -> None:
         webhook_app.state.wa_client = client
