@@ -70,6 +70,7 @@ def find_slots(
                             f"{s.duration} min"
                         ),
                         "local_time": s.time.astimezone(tz).strftime("%H:%M"),
+                        "date": s.time.astimezone(tz).strftime("%Y-%m-%d"),
                         "court": s.court_name,
                         "duration": s.duration,
                         "price": s.price,
@@ -175,6 +176,7 @@ def find_slots_date_range(
                                     f"{s.duration} min"
                                 ),
                                 "local_time": s.time.astimezone(tz).strftime("%H:%M"),
+                                "date": s.time.astimezone(tz).strftime("%Y-%m-%d"),
                                 "court": s.court_name,
                                 "duration": s.duration,
                                 "price": s.price,
