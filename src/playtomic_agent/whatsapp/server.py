@@ -750,6 +750,12 @@ def main() -> None:
                                 json=payload,
                                 timeout=10,
                             )
+                            if not resp.ok:
+                                logger.error(
+                                    "Web API rejected vote creation: %s — %s",
+                                    resp.status_code,
+                                    resp.text,
+                                )
                             resp.raise_for_status()
                             vote_id = resp.json().get("vote_id")
 
@@ -796,7 +802,14 @@ def main() -> None:
             log_level="warning",
         )
         server = uvicorn.Server(config)
-        asyncio.create_task(server.serve())
+        _webhook_task = asyncio.create_task(server.serve())
+        _webhook_task.add_done_callback(
+            lambda t: (
+                logger.error("Webhook server exited unexpectedly: %s", t.exception())
+                if not t.cancelled() and t.exception()
+                else None
+            )
+        )
 
         await client.connect()
         await client.idle()

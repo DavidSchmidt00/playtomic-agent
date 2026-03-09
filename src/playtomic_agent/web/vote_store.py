@@ -191,15 +191,22 @@ class VoteStore:
         return result
 
     def mark_notified(self, vote_id: str, slot_id: str) -> None:
-        """Mark a specific slot as notified."""
-        session = self.get(vote_id)
-        if not session:
-            return
-        notified = set(session.get("notified_slots", []))
-        notified.add(slot_id)
+        """Mark a specific slot as notified.
+
+        Read and write happen inside the same connection/transaction to prevent
+        a TOCTOU race where two concurrent callers could overwrite each other's update.
+        """
         conn = self._connect()
         try:
             with conn:
+                row = conn.execute(
+                    "SELECT IFNULL(notified_slots, '[]') FROM vote_sessions WHERE vote_id=?",
+                    (vote_id,),
+                ).fetchone()
+                if row is None:
+                    return
+                notified = set(json.loads(row[0]))
+                notified.add(slot_id)
                 conn.execute(
                     "UPDATE vote_sessions SET notified_slots=? WHERE vote_id=?",
                     (json.dumps(list(notified)), vote_id),
