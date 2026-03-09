@@ -7,6 +7,9 @@ import random
 from collections import defaultdict
 from typing import Any
 
+import requests
+import uvicorn
+from fastapi import FastAPI, Request
 from neonize.aioze.client import NewAClient
 from neonize.aioze.events import (
     ConnectFailureEv,
@@ -29,21 +32,55 @@ from playtomic_agent.whatsapp.agent import (
     extract_message_parts,
     extract_poll_data,
     extract_preference_updates,
+    extract_vote_link_data,
 )
 from playtomic_agent.whatsapp.storage import UserStorage
 
 logger = logging.getLogger(__name__)
 
-_GROUP_INTRO = (
-    "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
-    "Playtomic zu finden. 🎾\n\n"
-    "So funktioniert's:\n"
-    "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
-    "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
-    "* Suche Doppel-Courts in Berlin am Samstag\n"
-    "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
-    "Übrigens: Mich gibts auch auf https://padelagent.de 🌐"
-)
+
+def _group_intro() -> str:
+    return (
+        "Hallo! 👋 Ich bin der Padel-Agent und helfe dabei, freie Court-Slots auf "
+        "Playtomic zu finden. 🎾\n\n"
+        "So funktioniert's:\n"
+        "Erwähnt mich mit @ und stellt eure Frage, z.B.:\n"
+        "* Gibt es morgen Abend freie Courts bei Lemon Padel?\n"
+        "* Suche Doppel-Courts in Berlin am Samstag\n"
+        "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
+        f"Übrigens: Mich gibts auch auf {get_settings().web_public_base_url} 🌐"
+    )
+
+
+webhook_app = FastAPI(title="WhatsApp Webhook Receiver")
+
+
+@webhook_app.post("/api/webhook/consensus")
+async def consensus_webhook(req: Request):
+    """Receive threshold consensus from the Web API and notify the group."""
+    data = await req.json()
+    group_jid = data.get("group_jid")
+    display = data.get("display")
+    voter_count = data.get("voter_count")
+    vote_id = data.get("vote_id")
+
+    wa_client = getattr(webhook_app.state, "wa_client", None)
+    neonize_loop = getattr(webhook_app.state, "neonize_loop", None)
+    if wa_client and neonize_loop and group_jid and display:
+        msg = (
+            f"🎉 *Buchungs-Empfehlung erreicht!*\n\n"
+            f"{voter_count} Leute haben für diesen Slot abgestimmt:\n*{display}*\n\n"
+            "Zeit, den Court zu buchen! 🎾"
+        )
+        if data.get("booking_link"):
+            msg += f"\n👉 {data.get('booking_link')}"
+
+        # _send_text is a coroutine on the neonize event loop — dispatch safely
+        # across the loop boundary from uvicorn's loop.
+        asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        logger.info("Sent consensus webhook notification to %s for vote %s", group_jid, vote_id)
+
+    return {"status": "ok"}
 
 
 def _compute_send_delay(text: str, wpm: float) -> float:
@@ -415,7 +452,7 @@ def main() -> None:
             event.Reason,
             event.Type,
         )
-        await _send_text(wa_client, group_jid, _GROUP_INTRO)
+        await _send_text(wa_client, group_jid, _group_intro())
 
     @client.event(GroupInfoEv)
     async def on_group_info(wa_client: NewAClient, event: GroupInfoEv) -> None:
@@ -537,6 +574,8 @@ def main() -> None:
                 user_profile=user_state.profile,
                 language=user_state.language,
                 is_group=is_group,
+                poll_count=user_state.poll_count,
+                poll_threshold=settings.vote_link_poll_threshold,
             )
 
             async def _keep_typing(stop: asyncio.Event) -> None:
@@ -681,6 +720,7 @@ def main() -> None:
                             for s in slots_meta
                         ],
                     }
+                    user_state.poll_count += 1
                     storage.save(sender_id, user_state)
                     logger.info(
                         "Poll sent to group %s (%d options, id=%s)",
@@ -689,7 +729,88 @@ def main() -> None:
                         send_resp.ID,
                     )
 
+                vote_data = extract_vote_link_data(result)
+                if vote_data:
+                    vote_slots_meta: list[dict] = vote_data.get("slots", [])
+                    question = str(vote_data["question"])
+                    court_type = str(vote_data.get("court_type", "DOUBLE"))
+                    if len(vote_slots_meta) >= 2:
+                        threshold = 2 if court_type == "SINGLE" else 4
+                        payload = {
+                            "slots": vote_slots_meta,
+                            "metadata": {
+                                "group_jid": str(sender_jid),
+                                "threshold": threshold,
+                            },
+                        }
+                        try:
+                            resp = await asyncio.to_thread(
+                                requests.post,
+                                f"{get_settings().web_api_url}/api/votes",
+                                json=payload,
+                                timeout=10,
+                            )
+                            if not resp.ok:
+                                logger.error(
+                                    "Web API rejected vote creation: %s — %s",
+                                    resp.status_code,
+                                    resp.text,
+                                )
+                            resp.raise_for_status()
+                            vote_id = resp.json().get("vote_id")
+
+                            user_state.active_poll = {
+                                "vote_id": vote_id,
+                                "question": question,
+                                "court_type": court_type,
+                                "options": [
+                                    {
+                                        "display": s.get("display", ""),
+                                        "booking_link": s.get("booking_link", ""),
+                                        "voters": [],
+                                    }
+                                    for s in vote_slots_meta
+                                ],
+                            }
+                            storage.save(sender_id, user_state)
+                            vote_url = f"{get_settings().web_public_base_url}/vote/{vote_id}"
+
+                            vote_msg = f"🗳️ *{question}*\n\nHier abstimmen:\n{vote_url}"
+                            await _send_text(wa_client, sender_jid, vote_msg)
+                            user_state.poll_count += 1
+                            storage.save(sender_id, user_state)
+                            logger.info(
+                                "Vote link created via Web API and sent to %s (vote_id=%s)",
+                                sender_id,
+                                vote_id,
+                            )
+                        except Exception as exc:
+                            logger.error("Failed to create web vote via API: %s", exc)
+                            await _send_text(
+                                wa_client,
+                                sender_jid,
+                                "Entschuldigung, beim Erstellen der Web-Abstimmung ist ein Fehler aufgetreten. Bitte versuche es später noch einmal.",
+                            )
+
     async def _run() -> None:
+        webhook_app.state.wa_client = client
+        webhook_app.state.neonize_loop = asyncio.get_running_loop()
+        config = uvicorn.Config(
+            webhook_app,
+            port=get_settings().whatsapp_webhook_port,
+            host="0.0.0.0",
+            log_level="warning",
+        )
+        server = uvicorn.Server(config)
+        _webhook_task = asyncio.create_task(server.serve())
+        _webhook_task.add_done_callback(
+            lambda t: (
+                logger.error("Webhook server exited unexpectedly: %s", t.exception())
+                if not t.cancelled() and t.exception()
+                else None
+            )
+        )
+
         await client.connect()
         await client.idle()
 

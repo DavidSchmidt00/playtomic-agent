@@ -8,7 +8,8 @@ from datetime import timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException, Request
+import requests
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,7 @@ from slowapi.util import get_remote_address
 
 from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
+from playtomic_agent.config import get_settings
 from playtomic_agent.context import get_timezone, set_request_region
 from playtomic_agent.web.agent import create_playtomic_agent
 from playtomic_agent.web.vote_store import InvalidSlotError as _InvalidSlotError
@@ -116,6 +118,7 @@ class SlotResult(BaseModel):
 
 class CreateVoteRequest(BaseModel):
     slots: list[_VoteSlot]
+    metadata: dict | None = None
 
 
 class SlotVoteInput(BaseModel):
@@ -474,7 +477,7 @@ async def search_slots(req: SearchRequest):
 @app.post("/api/votes", status_code=201)
 async def create_vote_session(req: CreateVoteRequest):
     """Create a shareable vote session from selected FindMode results."""
-    vote_id = _get_vote_store().create(req.slots)
+    vote_id = _get_vote_store().create(req.slots, metadata=req.metadata)
     return {"vote_id": vote_id, "url": f"/vote/{vote_id}"}
 
 
@@ -487,16 +490,50 @@ async def get_vote_session(vote_id: str):
     return session
 
 
+def _fire_webhook(url: str, payload: dict) -> None:
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as exc:
+        logger.error(f"Failed to fire webhook {url}: {exc}")
+
+
 @app.post("/api/votes/{vote_id}/vote")
-async def cast_vote(vote_id: str, req: CastVoteRequest):
+async def cast_vote(vote_id: str, req: CastVoteRequest, background_tasks: BackgroundTasks):
     """Record per-slot availability for a voter."""
     votes_dict = {v.slot_id: v.can_attend for v in req.votes}
+    vote_store = _get_vote_store()
     try:
-        session = _get_vote_store().record_vote(vote_id, req.voter_name, votes_dict)
+        session = vote_store.record_vote(vote_id, req.voter_name, votes_dict)
     except _SessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except _InvalidSlotError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Task 6: Trigger Webhook from Web API
+    metadata = session.get("metadata") or {}
+    notified_slots = set(session.get("notified_slots") or [])
+    threshold = metadata.get("threshold")
+    group_jid = metadata.get("group_jid")
+
+    if threshold and group_jid:
+        webhook_url = get_settings().whatsapp_webhook_url
+        for sid, count in session["tally"].items():
+            if count >= threshold and sid not in notified_slots:
+                # Find slot display info
+                slot_info = next((s for s in session["slots"] if s["slot_id"] == sid), None)
+                if slot_info:
+                    vote_store.mark_notified(vote_id, sid)
+                    notified_slots.add(sid)
+
+                    payload = {
+                        "vote_id": vote_id,
+                        "group_jid": group_jid,
+                        "display": f"{slot_info.get('date')} {slot_info.get('local_time')} ({slot_info.get('duration')}m)",
+                        "booking_link": slot_info.get("booking_link"),
+                        "voter_count": count,
+                    }
+                    background_tasks.add_task(_fire_webhook, webhook_url, payload)
+
     return {
         "tally": session["tally"],
         "voter_count": session["voter_count"],
