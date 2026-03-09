@@ -53,9 +53,21 @@ class VoteStore:
                     CREATE TABLE IF NOT EXISTS vote_sessions (
                         vote_id TEXT PRIMARY KEY,
                         slots_json TEXT NOT NULL,
-                        created_at REAL NOT NULL
+                        created_at REAL NOT NULL,
+                        metadata_json TEXT DEFAULT '{}',
+                        notified_slots TEXT DEFAULT '[]'
                     )
                 """)
+                # Handle migrations for existing DB
+                try:
+                    conn.execute(
+                        "ALTER TABLE vote_sessions ADD COLUMN metadata_json TEXT DEFAULT '{}'"
+                    )
+                    conn.execute(
+                        "ALTER TABLE vote_sessions ADD COLUMN notified_slots TEXT DEFAULT '[]'"
+                    )
+                except sqlite3.OperationalError:
+                    pass
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS votes (
                         vote_id TEXT NOT NULL,
@@ -73,7 +85,7 @@ class VoteStore:
     def _new_id() -> str:
         return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
-    def create(self, slots: list[VoteSlot]) -> str:
+    def create(self, slots: list[VoteSlot], metadata: dict | None = None) -> str:
         vote_id = self._new_id()
         conn = self._connect()
         try:
@@ -83,8 +95,14 @@ class VoteStore:
                 ).fetchone():
                     vote_id = self._new_id()
                 conn.execute(
-                    "INSERT INTO vote_sessions (vote_id, slots_json, created_at) VALUES (?,?,?)",
-                    (vote_id, json.dumps([s.model_dump() for s in slots]), time.time()),
+                    "INSERT INTO vote_sessions (vote_id, slots_json, created_at, metadata_json, notified_slots) VALUES (?,?,?,?,?)",
+                    (
+                        vote_id,
+                        json.dumps([s.model_dump() for s in slots]),
+                        time.time(),
+                        json.dumps(metadata) if metadata else "{}",
+                        "[]",
+                    ),
                 )
         finally:
             conn.close()
@@ -94,13 +112,15 @@ class VoteStore:
         conn = self._connect()
         try:
             row = conn.execute(
-                "SELECT slots_json FROM vote_sessions WHERE vote_id=?",
+                "SELECT slots_json, IFNULL(metadata_json, '{}') as metadata_json, IFNULL(notified_slots, '[]') as notified_slots FROM vote_sessions WHERE vote_id=?",
                 (vote_id,),
             ).fetchone()
             if row is None:
                 return None
 
             slots = json.loads(row["slots_json"])
+            metadata = json.loads(row["metadata_json"])
+            notified_slots = json.loads(row["notified_slots"])
 
             # Expire the day after the latest slot date
             if slots:
@@ -133,6 +153,8 @@ class VoteStore:
             "voter_count": len(voters),
             "voters": sorted(voters),
             "attendees": attendees,
+            "metadata": metadata,
+            "notified_slots": notified_slots,
         }
 
     def record_vote(self, vote_id: str, voter: str, votes: dict[str, bool]) -> dict[str, Any]:
@@ -165,3 +187,20 @@ class VoteStore:
                 f"Vote session {vote_id!r} expired immediately after recording"
             )
         return result
+
+    def mark_notified(self, vote_id: str, slot_id: str) -> None:
+        """Mark a specific slot as notified."""
+        session = self.get(vote_id)
+        if not session:
+            return
+        notified = set(session.get("notified_slots", []))
+        notified.add(slot_id)
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute(
+                    "UPDATE vote_sessions SET notified_slots=? WHERE vote_id=?",
+                    (json.dumps(list(notified)), vote_id),
+                )
+        finally:
+            conn.close()

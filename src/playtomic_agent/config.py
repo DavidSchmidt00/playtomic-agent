@@ -116,6 +116,23 @@ class Settings(BaseSettings):
             "Set to 0 to disable."
         ),
     )
+    whatsapp_webhook_port: int = Field(
+        default=8081,
+        alias="WHATSAPP_WEBHOOK_PORT",
+        description="Port for the internal WhatsApp webhook server.",
+    )
+
+    # Web/WhatsApp Integration
+    web_api_url: str = Field(
+        default="http://localhost:8080",
+        alias="WEB_API_URL",
+        description="URL of the Web API backend.",
+    )
+    whatsapp_webhook_url: str = Field(
+        default="http://localhost:8081/webhook/consensus",
+        alias="WHATSAPP_WEBHOOK_URL",
+        description="URL to Ping when a web vote reaches consensus.",
+    )
 
 
 @lru_cache
