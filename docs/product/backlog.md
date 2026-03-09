@@ -19,10 +19,9 @@
 |---|---|---|
 | [Legal & Compliance](#epic-legal--compliance) | LEG-1, LEG-2, LEG-3 | 3 |
 | [Operations & Reliability](#epic-operations--reliability) | OPS-1, OPS-2, OPS-3, OPS-4 | 4 |
-| [Web Platform](#epic-web-platform) | WEB-1, WEB-2, WEB-3, WEB-4, WEB-5 | 5 |
+| [Web Platform](#epic-web-platform) | WEB-1, WEB-2, WEB-4, WEB-5 *(+ WEB-3 completed)* | 4 |
 | [WhatsApp Growth](#epic-whatsapp-growth) | WA-2, WA-5, WA-6 *(+ WA-1/3/4 completed)* | 3 |
 | [Revenue Loop](#epic-revenue-loop) | MON-0, MON-1, MON-2 | 3 |
-| [Business Development](#epic-business-development) | BD-1 | 1 |
 | [Contingency Channels](#epic-contingency-channels) | WEB-3, TG-1 | 2 |
 
 ---
@@ -242,7 +241,7 @@ Stage 2 (correct, ~2 days): replace `requests.Session` in `PlaytomicClient` with
 |---|---|---|---|---|---|
 | WEB-2 | [User Authentication](#web-2--user-authentication-web) | P1 | L | 💡 | **Start immediately — parallel with WEB-1** |
 | WEB-1 | [PWA / Installable App](#web-1--installable-mobile-app-pwa) | P1 | M | 📋 | Parallel with WEB-2 |
-| WEB-3 | [Web-Based Group Coordination](#web-3--web-based-group-coordination) | P1 | L | 💡 | M2; escalates to M0 on ban |
+| WEB-3 | [Web-Based Group Coordination](#web-3--web-based-group-coordination) | P1 | L | ✅ | Done |
 | WEB-4 | [Scanner Presets / Saved Searches](#web-4--scanner-presets--saved-searches) | P2 | S | 💡 | — |
 | WEB-5 | [Natural Language → Scanner Form Fill](#web-5--natural-language--scanner-form-fill) | P2 | M | 💡 | — |
 
@@ -299,7 +298,7 @@ Padel is organised on phones, often at short notice. Habit must exist before a p
 
 ### WEB-3 · Web-Based Group Coordination
 
-**Priority:** P1 · **Effort:** L · **Status:** 💡 · **Phase:** M2 (escalates to M0 on ban)
+**Priority:** P1 · **Effort:** L · **Status:** ✅ · **Phase:** M2 (escalates to M0 on ban)
 
 **Problem**
 If the WhatsApp account is banned, the native group poll disappears. Telegram is the technically
@@ -317,12 +316,12 @@ link when consensus is reached. Users never leave WhatsApp; coordination happens
 we control. Works entirely without any WhatsApp integration.
 
 **Acceptance criteria**
-- [ ] Shareable coordination page generated per search session with slot options
-- [ ] Members vote without signing in — name + tap is sufficient
-- [ ] Real-time vote tally visible to all participants on the page
-- [ ] Consensus triggers webhook that sends booking link to originating chat
-- [ ] Page mobile-optimised, loads < 2 seconds on 4G
-- [ ] Complete end-to-end without any WhatsApp integration (web-only flow works)
+- [x] Shareable coordination page generated per search session with slot options
+- [x] Members vote without signing in — name + tap is sufficient
+- [x] Real-time vote tally visible to all participants on the page
+- [x] Consensus triggers webhook that sends booking link to originating chat
+- [x] Page mobile-optimised, loads < 2 seconds on 4G
+- [x] Complete end-to-end without any WhatsApp integration (web-only flow works)
 
 ---
 
@@ -580,39 +579,6 @@ will be near zero. Test on real devices before shipping.
 
 ---
 
-## Epic: Business Development
-
-> **Goal:** Open the Playtomic partnership conversation before the product is a threat —
-> and before the API breaks. This is a months-long relationship investment, not a sprint task.
-
-| ID | Title | Priority | Effort | Status |
-|---|---|---|---|---|
-| BD-1 | [Playtomic Partnership Outreach](#bd-1--playtomic-partnership-outreach) | P1 | S (first contact) | 📋 |
-
----
-
-### BD-1 · Playtomic Partnership Outreach
-
-**Priority:** P1 · **Effort:** S (first contact; months to agreement) · **Status:** 📋
-
-**Problem**
-Padel Agent's entire data layer depends on an unofficial Playtomic API — no agreement, no SLA,
-no advance notice if access is cut. The product has no value on either channel if this breaks.
-
-**Why it matters**
-The right moment is now: the product works (something to show), usage is small (not a threat),
-the relationship is clean (no prior conflict). Waiting until the API breaks means negotiating
-from desperation. BD-1 is not an "Effort: S" task — it is a months-long relationship. "S"
-refers only to sending the first message. Start it now and track it as a long-horizon bet.
-
-**Acceptance criteria**
-- [ ] Initial outreach sent (business contact form, LinkedIn, or direct email)
-- [ ] Value proposition framed around mutual benefit: we drive bookings, they get attribution
-- [ ] Response logged — any outcome (positive, negative, no reply) documented
-- [ ] Follow-up scheduled if no response within 4 weeks
-
----
-
 ## Epic: Contingency Channels
 
 > **Goal:** The core coordination mechanic survives a WhatsApp ban — without asking users
@@ -624,7 +590,7 @@ refers only to sending the first message. Start it now and track it as a long-ho
 
 | ID | Title | Priority | Effort | Status | Phase |
 |---|---|---|---|---|---|
-| WEB-3 | [Web-Based Group Coordination](#web-3--web-based-group-coordination) | P1 | L | 💡 | M2 (escalates on ban) |
+| WEB-3 | [Web-Based Group Coordination](#web-3--web-based-group-coordination) | P1 | L | ✅ | M2 |
 | TG-1 | [Telegram Channel](#tg-1--telegram-channel-secondary-contingency) | P2 | L | 💡 | M2 |
 
 *WEB-3 full write-up is in the [Web Platform epic](#epic-web-platform) above.*

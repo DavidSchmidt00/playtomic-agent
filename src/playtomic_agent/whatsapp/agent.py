@@ -90,7 +90,10 @@ WA_TOOLS = [
 
 
 def _build_system_prompt(
-    user_profile: dict | None = None, language: str = "", is_group: bool = False
+    user_profile: dict | None = None,
+    language: str = "",
+    is_group: bool = False,
+    poll_count: int = 0,
 ) -> str:
     """Build the WhatsApp-specific system prompt."""
     profile_section = ""
@@ -117,6 +120,18 @@ def _build_system_prompt(
                 + "\nUse these as defaults when the user doesn't specify."
                 " Do NOT ask for these values if they are already set."
             )
+
+    voting_tool = "send_poll" if poll_count < 3 else "send_vote_link"
+    voting_action = (
+        f"call `{voting_tool}` (WhatsApp requires ≥2 options)"
+        if poll_count < 3
+        else f"call `{voting_tool}`"
+    )
+    voting_mechanic = (
+        "once 4 people pick the same slot, I'll send the booking link!"
+        if poll_count < 3
+        else "Click the link to vote"
+    )
 
     return (
         f"You are Padel Agent — a friendly, witty Padel court finder on WhatsApp. "
@@ -147,19 +162,19 @@ def _build_system_prompt(
         "   - Multiple days ('next 3 days', 'this weekend', etc.) -> `find_slots_date_range` (start_date + end_date).\n"
         "4. Slots found (>0)? -> "
         + (
-            "If 2+ slots: call `send_poll` (WhatsApp requires ≥2 options). If exactly 1 slot: send it as plain text with the booking link — do NOT call `send_poll`.\n"
+            f"If 2+ slots: {voting_action}. If exactly 1 slot: send it as plain text with the booking link — do NOT call `{voting_tool}`.\n"
             if is_group
             else "List them as a numbered plain text list in your reply.\n"
         )
         + "5. No slots found? -> Tell the user with a sympathetic quip and suggest a different date or time.\n\n"
         + (
-            "POLLS — MANDATORY in groups:\n"
-            "- ALWAYS use `send_poll` whenever you have 2+ slot options.\n"
-            "- NEVER list slots as plain text in a group — always a poll.\n"
-            "- Pass each slot dict from find_slots directly as-is (it already has 'display' and 'booking_link').\n"
-            "- Set court_type='SINGLE' if the user is looking for singles courts, otherwise 'DOUBLE'.\n"
-            "- Always send a short text reply alongside the poll AND briefly explain the voting mechanic:\n"
-            "  e.g. 'Vote for all slots that work for you — once 4 people pick the same slot, I'll send the booking link!' (adjust threshold: 2 for singles, 4 for doubles).\n\n"
+            f"POLLS/VOTING LINKS — MANDATORY in groups:\n"
+            f"- ALWAYS use `{voting_tool}` whenever you have 2+ slot options.\n"
+            f"- NEVER list slots as plain text in a group — always use `{voting_tool}`.\n"
+            f"- Pass each slot dict from find_slots directly as-is (it already has 'display' and 'booking_link').\n"
+            f"- Set court_type='SINGLE' if the user is looking for singles courts, otherwise 'DOUBLE'.\n"
+            f"- Always send a short text reply alongside {voting_tool} AND briefly explain the voting mechanic:\n"
+            f"  e.g. 'Vote for all slots that work for you — {voting_mechanic}' (adjust threshold: 2 for singles, 4 for doubles).\n\n"
             if is_group
             else ""
         )
@@ -175,13 +190,16 @@ def create_whatsapp_agent(
     user_profile: dict | None = None,
     language: str = "",
     is_group: bool = False,
+    poll_count: int = 0,
 ) -> CompiledStateGraph:
     """Create the WhatsApp agent with optional user profile injected into the system prompt."""
     return create_agent(
         model=llm,
         name="whatsapp_agent",
         tools=WA_TOOLS,
-        system_prompt=_build_system_prompt(user_profile, language=language, is_group=is_group),
+        system_prompt=_build_system_prompt(
+            user_profile, language=language, is_group=is_group, poll_count=poll_count
+        ),
     )
 
 
