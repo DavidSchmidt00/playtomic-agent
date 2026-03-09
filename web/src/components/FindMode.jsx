@@ -232,22 +232,12 @@ export default function FindMode({ region, profile }) {
     }
   }
 
-  function slotKey(slot) {
-    return `${slot.date}_${slot.local_time}_${slot.court}_${slot.duration}`
-  }
-
   function handleOpenVoteMode() {
-    const init = {}
-    results.forEach(slot => { init[slotKey(slot)] = true })
-    setSelected(init)
+    setSelected(Object.fromEntries(results.map((_, i) => [i, true])))
     setVoteUrl(null)
     setVoteError(null)
     setVoteCopied(false)
     setVoteMode(true)
-  }
-
-  function toggleSlotSelection(slotId) {
-    setSelected(prev => ({ ...prev, [slotId]: !prev[slotId] }))
   }
 
   function selectAll(val) {
@@ -255,7 +245,7 @@ export default function FindMode({ region, profile }) {
   }
 
   async function handleCreateVote() {
-    const chosenSlots = results.filter(s => selected[slotKey(s)])
+    const chosenSlots = results.filter((_, i) => selected[i])
     if (chosenSlots.length === 0) {
       setVoteError(t('vote.no_slots_selected'))
       return
@@ -569,14 +559,12 @@ export default function FindMode({ region, profile }) {
                     </div>
                   </div>
 
-                  {results.map((slot) => {
-                    const sid = slotKey(slot)
-                    return (
-                      <label key={sid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                  {results.map((slot, i) => (
+                      <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
-                          checked={!!selected[sid]}
-                          onChange={() => toggleSlotSelection(sid)}
+                          checked={!!selected[i]}
+                          onChange={() => setSelected(prev => ({ ...prev, [i]: !prev[i] }))}
                           style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }}
                         />
                         <span className="find-slot-meta" style={{ minWidth: '60px' }}>{formatDayLabel(slot.date, region?.language || i18n.language)}</span>
@@ -585,8 +573,7 @@ export default function FindMode({ region, profile }) {
                         <span className="find-slot-meta">{slot.duration} min</span>
                         <span className="find-slot-price">{slot.price}</span>
                       </label>
-                    )
-                  })}
+                  ))}
 
                   {voteError && <div className="find-error" style={{ marginTop: '6px' }}>{voteError}</div>}
 
