@@ -129,9 +129,19 @@ class Settings(BaseSettings):
         description="URL of the Web API backend.",
     )
     whatsapp_webhook_url: str = Field(
-        default="http://localhost:8081/webhook/consensus",
+        default="http://localhost:8081/api/webhook/consensus",
         alias="WHATSAPP_WEBHOOK_URL",
         description="URL to Ping when a web vote reaches consensus.",
+    )
+    vote_link_poll_threshold: int = Field(
+        default=3,
+        alias="VOTE_LINK_POLL_THRESHOLD",
+        description="Native polls per group before switching to web voting links.",
+    )
+    web_public_base_url: str = Field(
+        default="https://padelagent.de",
+        alias="WEB_PUBLIC_BASE_URL",
+        description="Public base URL for sharing vote links outside the dev environment.",
     )
 
 

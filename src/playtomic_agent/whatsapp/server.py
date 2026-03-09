@@ -565,7 +565,8 @@ def main() -> None:
                 user_profile=user_state.profile,
                 language=user_state.language,
                 is_group=is_group,
-                poll_count=getattr(user_state, "poll_count", 0),
+                poll_count=user_state.poll_count,
+                poll_threshold=settings.vote_link_poll_threshold,
             )
 
             async def _keep_typing(stop: asyncio.Event) -> None:
@@ -710,6 +711,7 @@ def main() -> None:
                             for s in slots_meta
                         ],
                     }
+                    user_state.poll_count += 1
                     storage.save(sender_id, user_state)
                     logger.info(
                         "Poll sent to group %s (%d options, id=%s)",
@@ -756,13 +758,12 @@ def main() -> None:
                                 ],
                             }
                             storage.save(sender_id, user_state)
-                            vote_url = f"{get_settings().web_api_url}/vote/{vote_id}"
-                            # Standardize to public base url for display if dev url is localhost
-                            if "localhost" in vote_url or "127.0.0.1" in vote_url:
-                                vote_url = f"https://padelagent.de/vote/{vote_id}"
+                            vote_url = f"{get_settings().web_public_base_url}/vote/{vote_id}"
 
                             vote_msg = f"🗳️ *{question}*\n\nHier abstimmen:\n{vote_url}"
                             await _send_text(wa_client, sender_jid, vote_msg)
+                            user_state.poll_count += 1
+                            storage.save(sender_id, user_state)
                             logger.info(
                                 "Vote link created via Web API and sent to %s (vote_id=%s)",
                                 sender_id,

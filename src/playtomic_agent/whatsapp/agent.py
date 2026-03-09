@@ -94,6 +94,7 @@ def _build_system_prompt(
     language: str = "",
     is_group: bool = False,
     poll_count: int = 0,
+    poll_threshold: int = 3,
 ) -> str:
     """Build the WhatsApp-specific system prompt."""
     profile_section = ""
@@ -121,15 +122,15 @@ def _build_system_prompt(
                 " Do NOT ask for these values if they are already set."
             )
 
-    voting_tool = "send_poll" if poll_count < 3 else "send_vote_link"
+    voting_tool = "send_poll" if poll_count < poll_threshold else "send_vote_link"
     voting_action = (
         f"call `{voting_tool}` (WhatsApp requires ≥2 options)"
-        if poll_count < 3
+        if poll_count < poll_threshold
         else f"call `{voting_tool}`"
     )
     voting_mechanic = (
         "once 4 people pick the same slot, I'll send the booking link!"
-        if poll_count < 3
+        if poll_count < poll_threshold
         else "Click the link to vote"
     )
 
@@ -191,6 +192,7 @@ def create_whatsapp_agent(
     language: str = "",
     is_group: bool = False,
     poll_count: int = 0,
+    poll_threshold: int = 3,
 ) -> CompiledStateGraph:
     """Create the WhatsApp agent with optional user profile injected into the system prompt."""
     return create_agent(
@@ -198,7 +200,11 @@ def create_whatsapp_agent(
         name="whatsapp_agent",
         tools=WA_TOOLS,
         system_prompt=_build_system_prompt(
-            user_profile, language=language, is_group=is_group, poll_count=poll_count
+            user_profile,
+            language=language,
+            is_group=is_group,
+            poll_count=poll_count,
+            poll_threshold=poll_threshold,
         ),
     )
 
