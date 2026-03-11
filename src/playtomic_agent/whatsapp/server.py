@@ -26,6 +26,7 @@ from neonize.utils.message import extract_text, get_poll_update_message
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.log_config import setup_logging
+from playtomic_agent.metrics import metrics_app
 from playtomic_agent.whatsapp.agent import (
     WAResponse,
     create_whatsapp_agent,
@@ -52,6 +53,7 @@ def _group_intro() -> str:
 
 
 webhook_app = FastAPI(title="WhatsApp Webhook Receiver")
+webhook_app.mount("/metrics", metrics_app)
 
 
 @webhook_app.post("/api/webhook/consensus")
