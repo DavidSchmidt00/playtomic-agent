@@ -69,7 +69,7 @@ async def consensus_webhook(req: Request):
         # Parse "user@server" string back into a neonize JID object, which
         # send_message / send_chat_presence require (plain strings are rejected).
         user, _, server = group_jid.partition("@")
-        jid_obj = JID(User=user, Server=server)
+        jid_obj = JID(User=user, Server=server, RawAgent=0, Device=0, Integrator=0)
 
         msg = (
             f"🎉 *Buchungs-Empfehlung erreicht!*\n\n"
