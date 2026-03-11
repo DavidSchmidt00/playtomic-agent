@@ -1,12 +1,14 @@
 import os
+import sqlite3
 
 import pytest
+
 from playtomic_agent.whatsapp.storage import UserState, UserStorage
 
 
 @pytest.fixture
 def storage(tmp_path):
-    return UserStorage(str(tmp_path / "users.json"))
+    return UserStorage(str(tmp_path / "users.db"))
 
 
 def test_load_unknown_sender_returns_empty_state(storage):
@@ -45,18 +47,41 @@ def test_overwrite_existing_sender(storage):
     assert storage.load("+4912345678").profile["city"] == "Hamburg"
 
 
-def test_corrupted_file_returns_empty(tmp_path):
-    path = str(tmp_path / "users.json")
-    with open(path, "w") as f:
-        f.write("not valid json{{{")
-
-    storage = UserStorage(path)
-    state = storage.load("+4912345678")
-    assert state.profile == {}
+def test_load_from_new_db_returns_empty(tmp_path):
+    """A freshly created DB always returns empty state for any sender."""
+    storage = UserStorage(str(tmp_path / "fresh.db"))
+    assert storage.load("+4912345678").profile == {}
 
 
 def test_creates_parent_directory(tmp_path):
-    nested_path = str(tmp_path / "subdir" / "nested" / "users.json")
+    nested_path = str(tmp_path / "subdir" / "nested" / "users.db")
     storage = UserStorage(nested_path)
     storage.save("+111", UserState())
     assert os.path.exists(nested_path)
+
+
+def test_wal_mode_enabled(tmp_path):
+    db_path = str(tmp_path / "users.db")
+    UserStorage(db_path)
+    conn = sqlite3.connect(db_path)
+    mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+    conn.close()
+    assert mode == "wal"
+
+
+def test_active_poll_roundtrip(storage):
+    state = UserState(
+        active_poll={"message_id": "abc123", "question": "Slot?", "options": []},
+        poll_count=1,
+    )
+    storage.save("+123", state)
+    loaded = storage.load("+123")
+    assert loaded.active_poll == {"message_id": "abc123", "question": "Slot?", "options": []}
+    assert loaded.poll_count == 1
+
+
+def test_null_active_poll_roundtrip(storage):
+    state = UserState(active_poll=None)
+    storage.save("+123", state)
+    loaded = storage.load("+123")
+    assert loaded.active_poll is None

@@ -25,8 +25,8 @@ src/playtomic_agent/
 │   └── api.py          # FastAPI POST /api/chat, SSE streaming
 ├── whatsapp/
 │   ├── server.py       # neonize entry point, on_message handler, user_locks
-│   ├── agent.py        # create_whatsapp_agent(), extract_final_text/preference_updates()
-│   └── storage.py      # UserStorage (JSON), UserState dataclass
+│   ├── agent.py        # create_whatsapp_agent(), respond tool, WAResponse, extract_response()
+│   └── storage.py      # UserStorage (SQLite), UserState dataclass
 ├── tools.py            # All @tool-decorated LangChain tools
 ├── llm.py              # Gemini instance (shared by both agents)
 ├── config.py           # Settings (pydantic-settings, reads .env)
@@ -40,7 +40,7 @@ src/playtomic_agent/
 web/                    # React 18 + Vite frontend (port 8080, port 5001 = LangGraph Studio / debug server)
 data/                   # Runtime data (gitignored)
   whatsapp_session.db   # neonize SQLite session (auto-created)
-  whatsapp_users.json   # per-user WhatsApp state (auto-created)
+  whatsapp_users.db     # per-user WhatsApp state (auto-created, SQLite)
 tests/                  # pytest suite
 ```
 
@@ -56,7 +56,7 @@ tests/                  # pytest suite
 | `DEFAULT_TIMEZONE` | no | `Europe/Berlin` | Agent timezone |
 | `PLAYTOMIC_API_BASE_URL` | no | `https://api.playtomic.io/v1` | Playtomic API base |
 | `WHATSAPP_SESSION_DB` | WhatsApp only | `data/whatsapp_session.db` | neonize session file |
-| `WHATSAPP_STORAGE_PATH` | WhatsApp only | `data/whatsapp_users.json` | per-user state file |
+| `WHATSAPP_STORAGE_PATH` | WhatsApp only | `data/whatsapp_users.db` | per-user state file (SQLite) |
 
 ## Commands
 
@@ -97,9 +97,10 @@ WhatsApp → neonize on_message handler
   → UserStorage.load(sender_id)           # load history + profile + language
   → create_whatsapp_agent(profile, lang)
   → asyncio.to_thread(agent.invoke(...))  # offload sync call
-  → extract_final_text() + extract_preference_updates()
+  → set_wa_invocation_state(user_state)  # ContextVar injection for update_user_profile
+  → extract_response() / extract_final_text() (fallback)
   → UserStorage.save()
-  → wa_client.send_message(text)
+  → _dispatch_wa_response() / wa_client.send_message()
 ```
 
 Concurrency: per-user `asyncio.Lock` in `user_locks` dict prevents overlapping replies.
@@ -112,7 +113,7 @@ neonize runs its own asyncio loop (`event_global_loop`) in a daemon thread.
 | Tools | full set incl. `suggest_next_steps` | core tools only; no `suggest_next_steps` |
 | Output | Markdown | **plain text only** |
 | Language | per-request `ContextVar` | detected on first msg, persisted in `UserState.language` |
-| Profile storage | browser `localStorage` | `data/whatsapp_users.json` |
+| Profile storage | browser `localStorage` | `data/whatsapp_users.db` (SQLite) |
 | Response mode | SSE streaming | single `send_message()` after full invoke |
 
 ## Tools (`tools.py`)
@@ -134,7 +135,7 @@ To add a tool: define with `@tool` + `Annotated` params in `tools.py`, add to `T
 `preferred_club_slug`, `preferred_club_name`, `preferred_city`, `court_type`, `duration`, `preferred_time`
 
 Web: stored in `localStorage` key `padel-agent-profile`.
-WhatsApp: stored in `UserState.profile` → `data/whatsapp_users.json`.
+WhatsApp: stored in `UserState.profile` → `data/whatsapp_users.db` (SQLite).
 
 ## Exceptions (`client/exceptions.py`)
 
@@ -153,7 +154,7 @@ WhatsApp: stored in `UserState.profile` → `data/whatsapp_users.json`.
 - **Ruff line length** — 100 chars (not 120). Break lines early.
 - **MyPy** — enabled but LangChain/LangGraph packages are exempt. Use `Annotated` for tool params; avoid `# type: ignore` (prefer `pyproject.toml` overrides).
 - **Booking URLs** — `time.replace(':', '%3A')` required (handled in `client/utils.py`).
-- **WhatsApp language detection** — agent calls `update_user_profile("language", "<code>")` on first message; server extracts it and saves to `UserState.language` so it persists across sessions.
+- **WhatsApp language detection** — agent calls `update_user_profile("language", "<code>")` on first message; the WA-specific tool mutates `UserState.language` directly via ContextVar so it persists across sessions.
 
 ## Git Conventions
 

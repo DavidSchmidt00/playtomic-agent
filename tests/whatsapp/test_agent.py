@@ -1,95 +1,30 @@
-"""Tests for WhatsApp agent helper functions and send_poll tool."""
+"""Tests for the WhatsApp agent: respond tool, extract_response, update_user_profile."""
 
 import json
 from unittest.mock import MagicMock
 
-from playtomic_agent.whatsapp.agent import (
-    extract_final_text,
-    extract_poll_data,
-    extract_preference_updates,
-    extract_vote_link_data,
-    send_poll,
-    send_vote_link,
-)
+import pytest
+from pydantic import ValidationError
 
-# ---------------------------------------------------------------------------
-# send_poll tool & send_vote_link tool
-# ---------------------------------------------------------------------------
+from playtomic_agent.whatsapp.agent import (
+    WAPoll,
+    WAResponse,
+    WAVoteLink,
+    _wa_state_ctx,
+    extract_final_text,
+    extract_response,
+    respond,
+    set_wa_invocation_state,
+    update_user_profile,
+)
+from playtomic_agent.whatsapp.storage import UserState
 
 _SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90 min", "booking_link": "https://x"}
 _SLOT_B = {"display": "Mo | 01.03 | 19:30 | 60 min", "booking_link": "https://y"}
 
 
-def test_send_poll_returns_wa_poll():
-    slots = [_SLOT_A, _SLOT_B]
-    result = send_poll.invoke({"question": "Welcher Slot?", "slots": slots})
-    assert "wa_poll" in result
-    assert result["wa_poll"]["question"] == "Welcher Slot?"
-    assert result["wa_poll"]["slots"] == slots
-
-
-def test_send_poll_default_court_type_is_double():
-    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A, _SLOT_B]})
-    assert result["wa_poll"]["court_type"] == "DOUBLE"
-
-
-def test_send_poll_single_court_type():
-    result = send_poll.invoke(
-        {"question": "Slot?", "slots": [_SLOT_A, _SLOT_B], "court_type": "SINGLE"}
-    )
-    assert result["wa_poll"]["court_type"] == "SINGLE"
-
-
-def test_send_poll_rejects_fewer_than_2_slots():
-    result = send_poll.invoke({"question": "Slot?", "slots": [_SLOT_A]})
-    assert "error" in result
-    assert "wa_poll" not in result
-
-
-def test_send_poll_limits_to_12():
-    slots = [
-        {"display": f"Mo | 01.03 | {i:02d}:00 | 60 min", "booking_link": ""} for i in range(15)
-    ]
-    result = send_poll.invoke({"question": "Pick?", "slots": slots})
-    assert len(result["wa_poll"]["slots"]) == 12
-
-
-def test_send_vote_link_returns_wa_vote_link():
-    slots = [_SLOT_A, _SLOT_B]
-    result = send_vote_link.invoke({"question": "Welcher Slot?", "slots": slots})
-    assert "wa_vote_link" in result
-    assert result["wa_vote_link"]["question"] == "Welcher Slot?"
-    assert result["wa_vote_link"]["slots"] == slots
-
-
-def test_send_vote_link_default_court_type_is_double():
-    result = send_vote_link.invoke({"question": "Slot?", "slots": [_SLOT_A, _SLOT_B]})
-    assert result["wa_vote_link"]["court_type"] == "DOUBLE"
-
-
-def test_send_vote_link_single_court_type():
-    result = send_vote_link.invoke(
-        {"question": "Slot?", "slots": [_SLOT_A, _SLOT_B], "court_type": "SINGLE"}
-    )
-    assert result["wa_vote_link"]["court_type"] == "SINGLE"
-
-
-def test_send_vote_link_rejects_fewer_than_2_slots():
-    result = send_vote_link.invoke({"question": "Slot?", "slots": [_SLOT_A]})
-    assert "error" in result
-    assert "wa_vote_link" not in result
-
-
-def test_send_vote_link_limits_to_12():
-    slots = [
-        {"display": f"Mo | 01.03 | {i:02d}:00 | 60 min", "booking_link": ""} for i in range(15)
-    ]
-    result = send_vote_link.invoke({"question": "Pick?", "slots": slots})
-    assert len(result["wa_vote_link"]["slots"]) == 12
-
-
 # ---------------------------------------------------------------------------
-# extract_final_text
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -101,6 +36,104 @@ def _make_ai_msg(text: str, tool_calls=None):
     m.tool_calls = tool_calls or []
     m.tool_call_id = None
     return m
+
+
+def _make_tool_msg(name: str, content: object) -> MagicMock:
+    m = MagicMock()
+    m.name = name
+    m.tool_call_id = "tc_123"
+    m.content = json.dumps(content) if not isinstance(content, str) else content
+    return m
+
+
+# ---------------------------------------------------------------------------
+# respond tool
+# ---------------------------------------------------------------------------
+
+
+def test_respond_text_only():
+    result = respond.invoke({"response": WAResponse(text_parts=["Hello", "World"])})
+    assert result["text_parts"] == ["Hello", "World"]
+    assert result["poll"] is None
+    assert result["vote_link"] is None
+
+
+def test_respond_with_poll():
+    poll = WAPoll(question="Welcher Slot?", slots=[_SLOT_A, _SLOT_B])
+    result = respond.invoke({"response": WAResponse(text_parts=["Hier die Auswahl:"], poll=poll)})
+    assert result["poll"]["question"] == "Welcher Slot?"
+    assert result["poll"]["court_type"] == "DOUBLE"
+    assert result["vote_link"] is None
+
+
+def test_respond_with_vote_link():
+    vl = WAVoteLink(question="Vote!", slots=[_SLOT_A, _SLOT_B], court_type="SINGLE")
+    result = respond.invoke({"response": WAResponse(vote_link=vl)})
+    assert result["vote_link"]["court_type"] == "SINGLE"
+    assert result["poll"] is None
+
+
+def test_respond_default_court_type_is_double():
+    poll = WAPoll(question="?", slots=[_SLOT_A, _SLOT_B])
+    result = respond.invoke({"response": WAResponse(poll=poll)})
+    assert result["poll"]["court_type"] == "DOUBLE"
+
+
+def test_respond_raises_if_poll_and_vote_link_both_set():
+    with pytest.raises(ValidationError):
+        WAResponse(
+            poll=WAPoll(question="?", slots=[_SLOT_A]),
+            vote_link=WAVoteLink(question="?", slots=[_SLOT_A]),
+        )
+
+
+# ---------------------------------------------------------------------------
+# extract_response
+# ---------------------------------------------------------------------------
+
+
+def test_extract_response_finds_respond_tool():
+    payload = {
+        "text_parts": ["Here are your slots:"],
+        "poll": {"question": "Slot?", "slots": [_SLOT_A, _SLOT_B], "court_type": "DOUBLE"},
+        "vote_link": None,
+    }
+    result = {"messages": [_make_tool_msg("respond", payload)]}
+    wa_response = extract_response(result)
+    assert wa_response is not None
+    assert wa_response.text_parts == ["Here are your slots:"]
+    assert wa_response.poll is not None
+    assert wa_response.poll.question == "Slot?"
+
+
+def test_extract_response_returns_none_when_absent():
+    result = {"messages": [_make_tool_msg("find_slots", {"count": 0, "slots": []})]}
+    assert extract_response(result) is None
+
+
+def test_extract_response_returns_none_on_invalid_payload():
+    """Mutually exclusive constraint triggers a warning + None, not a crash."""
+    payload = {
+        "text_parts": [],
+        "poll": {"question": "?", "slots": [_SLOT_A], "court_type": "DOUBLE"},
+        "vote_link": {"question": "?", "slots": [_SLOT_A], "court_type": "DOUBLE"},
+    }
+    result = {"messages": [_make_tool_msg("respond", payload)]}
+    assert extract_response(result) is None
+
+
+def test_extract_response_empty_payload_gives_defaults():
+    """An empty dict is a valid WAResponse with all-default fields."""
+    result = {"messages": [_make_tool_msg("respond", {})]}
+    wa_response = extract_response(result)
+    assert wa_response is not None
+    assert wa_response.text_parts == []
+    assert wa_response.poll is None
+
+
+# ---------------------------------------------------------------------------
+# extract_final_text (fallback — unchanged behaviour)
+# ---------------------------------------------------------------------------
 
 
 def test_extract_final_text_returns_last_ai_message():
@@ -136,81 +169,28 @@ def test_extract_final_text_empty_result():
 
 
 # ---------------------------------------------------------------------------
-# extract_poll_data
+# WA-specific update_user_profile (ContextVar side-effect)
 # ---------------------------------------------------------------------------
 
 
-def _make_tool_msg(name: str, content):
-    m = MagicMock()
-    m.name = name
-    m.tool_call_id = "tc_123"
-    m.content = json.dumps(content) if not isinstance(content, str) else content
-    return m
+def test_update_user_profile_mutates_profile():
+    state = UserState(profile={}, language="")
+    set_wa_invocation_state(state)
+    result = update_user_profile.invoke({"key": "preferred_city", "value": "Berlin"})
+    assert result == {"status": "saved", "key": "preferred_city", "value": "Berlin"}
+    assert state.profile["preferred_city"] == "Berlin"
 
 
-def test_extract_poll_data_finds_wa_poll():
-    poll_payload = {
-        "wa_poll": {"question": "Welcher Slot?", "slots": [_SLOT_A], "court_type": "DOUBLE"}
-    }
-    result = {"messages": [_make_tool_msg("send_poll", poll_payload)]}
-    poll = extract_poll_data(result)
-    assert poll is not None
-    assert poll["question"] == "Welcher Slot?"
-    assert poll["slots"] == [_SLOT_A]
-    assert poll["court_type"] == "DOUBLE"
+def test_update_user_profile_sets_language_not_profile():
+    state = UserState(profile={}, language="")
+    set_wa_invocation_state(state)
+    update_user_profile.invoke({"key": "language", "value": "de"})
+    assert state.language == "de"
+    assert "language" not in state.profile
 
 
-def test_extract_poll_data_returns_none_when_absent():
-    result = {"messages": [_make_tool_msg("find_slots", {"count": 0, "slots": []})]}
-    assert extract_poll_data(result) is None
-
-
-def test_extract_vote_link_data_finds_wa_vote_link():
-    vote_link_payload = {
-        "wa_vote_link": {"question": "Welcher Slot?", "slots": [_SLOT_A], "court_type": "DOUBLE"}
-    }
-    result = {"messages": [_make_tool_msg("send_vote_link", vote_link_payload)]}
-    vote_data = extract_vote_link_data(result)
-    assert vote_data is not None
-    assert vote_data["question"] == "Welcher Slot?"
-    assert vote_data["slots"] == [_SLOT_A]
-    assert vote_data["court_type"] == "DOUBLE"
-
-
-def test_extract_vote_link_data_returns_none_when_absent():
-    result = {"messages": [_make_tool_msg("find_slots", {"count": 0, "slots": []})]}
-    assert extract_vote_link_data(result) is None
-
-
-# ---------------------------------------------------------------------------
-# extract_preference_updates
-# ---------------------------------------------------------------------------
-
-
-def test_extract_preference_updates_finds_profile_update():
-    payload = {"profile_update": {"key": "preferred_city", "value": "Berlin"}}
-    result = {"messages": [_make_tool_msg("update_user_profile", payload)]}
-    updates = extract_preference_updates(result)
-    assert updates == {"preferred_city": "Berlin"}
-
-
-def test_extract_preference_updates_merges_multiple():
-    result = {
-        "messages": [
-            _make_tool_msg(
-                "update_user_profile",
-                {"profile_update": {"key": "preferred_club_slug", "value": "lemon"}},
-            ),
-            _make_tool_msg(
-                "update_user_profile",
-                {"profile_update": {"key": "preferred_club_name", "value": "Lemon Padel"}},
-            ),
-        ]
-    }
-    updates = extract_preference_updates(result)
-    assert updates == {"preferred_club_slug": "lemon", "preferred_club_name": "Lemon Padel"}
-
-
-def test_extract_preference_updates_ignores_other_tools():
-    result = {"messages": [_make_tool_msg("find_slots", {"count": 0})]}
-    assert extract_preference_updates(result) == {}
+def test_update_user_profile_noop_when_no_context():
+    """Returns success even when no UserState is injected — does not crash."""
+    _wa_state_ctx.set(None)
+    result = update_user_profile.invoke({"key": "preferred_city", "value": "Munich"})
+    assert result["status"] == "saved"

@@ -1,10 +1,13 @@
 import json
+import logging
+from contextvars import ContextVar
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel, model_validator
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.llm import llm
@@ -15,65 +18,99 @@ from playtomic_agent.tools import (
     find_slots,
     find_slots_date_range,
     is_weekend,
-    update_user_profile,
 )
+from playtomic_agent.whatsapp.storage import UserState
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# ---------------------------------------------------------------------------
+# Per-invocation ContextVar — injected by server.py before asyncio.to_thread.
+# asyncio.to_thread copies the current context into the worker thread so the
+# update_user_profile tool can mutate the live UserState object in-place.
+# ---------------------------------------------------------------------------
+
+_wa_state_ctx: ContextVar[UserState | None] = ContextVar("_wa_state_ctx", default=None)
+
+
+def set_wa_invocation_state(state: UserState) -> None:
+    """Call before asyncio.to_thread(agent.invoke, ...) to inject the live state."""
+    _wa_state_ctx.set(state)
+
+
+# ---------------------------------------------------------------------------
+# WA-specific update_user_profile — direct side-effect, no post-hoc extraction
+# ---------------------------------------------------------------------------
 
 
 @tool(
     description=(
-        "Send a reply as multiple sequential WhatsApp messages. Use when your response has "
-        "distinct parts (e.g. intro text + slot list, or context + booking link). "
-        "Each part becomes its own message, sent in order."
+        "Silently saves a user preference. "
+        "KEYS: 'preferred_club_slug', 'preferred_club_name', 'preferred_city', "
+        "'court_type', 'duration', 'preferred_time', 'language'."
     )
 )
-def send_messages(
-    parts: Annotated[list[str], "Ordered list of message texts, one per WhatsApp message."],
-) -> Annotated[dict, "Message parts payload forwarded to WhatsApp."]:
-    """Instructs the server to send each part as a separate WhatsApp message."""
-    return {"wa_messages": parts}
+def update_user_profile(
+    key: Annotated[str, "Preference key."],
+    value: Annotated[str, "Preference value."],
+) -> Annotated[dict, "Confirmation that the preference was saved."]:
+    """Mutates the live UserState in the current ContextVar context."""
+    user_state = _wa_state_ctx.get()
+    if user_state is not None:
+        if key == "language":
+            user_state.language = value
+        else:
+            user_state.profile[key] = value
+    return {"status": "saved", "key": key, "value": value}
 
 
-@tool(description="Present slot options as a native WhatsApp poll. Only use in groups.")
-def send_poll(
-    question: Annotated[str, "Short poll question, e.g. 'Welcher Slot passt euch?'"],
-    slots: Annotated[
-        list[dict],
-        "List of slot dicts from find_slots. Each MUST have 'display' and 'booking_link'. Max 12.",
-    ],
-    court_type: Annotated[
-        str,
-        "'SINGLE' for 1v1 courts (threshold: 2 votes) or 'DOUBLE' for 2v2 courts (threshold: 4 votes). Default: 'DOUBLE'.",
-    ] = "DOUBLE",
-) -> Annotated[dict, "Poll payload forwarded to WhatsApp."]:
-    """Sends a native WhatsApp poll. Slot display labels come pre-formatted from find_slots."""
-    if len(slots) < 2:
-        return {
-            "error": "WhatsApp polls require at least 2 options. List the single slot as text instead."
-        }
-    return {"wa_poll": {"question": question, "slots": slots[:12], "court_type": court_type}}
+# ---------------------------------------------------------------------------
+# Output model — replaces send_messages + send_poll + send_vote_link
+# ---------------------------------------------------------------------------
 
 
-@tool(description="Present slot options as a shareable web voting link. Only use in groups.")
-def send_vote_link(
-    question: Annotated[str, "Short poll question, e.g. 'Welcher Slot passt euch?'"],
-    slots: Annotated[
-        list[dict],
-        "List of slot dicts from find_slots. Each MUST have 'display' and 'booking_link'. Max 12.",
-    ],
-    court_type: Annotated[
-        str,
-        "'SINGLE' for 1v1 courts (threshold: 2 votes) or 'DOUBLE' for 2v2 courts (threshold: 4 votes). Default: 'DOUBLE'.",
-    ] = "DOUBLE",
-) -> Annotated[dict, "Web vote link payload to generate a URL."]:
-    """Sends a web voting link. Slot display labels come pre-formatted from find_slots."""
-    if len(slots) < 2:
-        return {
-            "error": "Voting links require at least 2 options. List the single slot as text instead."
-        }
-    return {"wa_vote_link": {"question": question, "slots": slots[:12], "court_type": court_type}}
+class WAPoll(BaseModel):
+    question: str
+    slots: list[dict]
+    court_type: str = "DOUBLE"
 
+
+class WAVoteLink(BaseModel):
+    question: str
+    slots: list[dict]
+    court_type: str = "DOUBLE"
+
+
+class WAResponse(BaseModel):
+    text_parts: list[str] = []
+    poll: WAPoll | None = None
+    vote_link: WAVoteLink | None = None
+
+    @model_validator(mode="after")
+    def _exclusive(self) -> "WAResponse":
+        if self.poll is not None and self.vote_link is not None:
+            raise ValueError("poll and vote_link are mutually exclusive")
+        return self
+
+
+@tool(
+    description=(
+        "Emit your complete response. Call exactly once as the final step. "
+        "text_parts: ordered list of sequential WhatsApp messages. "
+        "In groups with 2+ slots: set poll (below poll threshold) XOR vote_link (at/above threshold). "
+        "Never set both. Never set poll or vote_link for a single slot — use text_parts only."
+    )
+)
+def respond(
+    response: Annotated[WAResponse, "The complete response to send."],
+) -> dict:
+    """Return the response payload for server.py to dispatch."""
+    return response.model_dump()
+
+
+# ---------------------------------------------------------------------------
+# Tool registry
+# ---------------------------------------------------------------------------
 
 WA_TOOLS = [
     find_slots,
@@ -83,10 +120,13 @@ WA_TOOLS = [
     find_clubs_by_location,
     find_clubs_by_name,
     update_user_profile,
-    send_messages,
-    send_poll,
-    send_vote_link,
+    respond,
 ]
+
+
+# ---------------------------------------------------------------------------
+# System prompt
+# ---------------------------------------------------------------------------
 
 
 def _build_system_prompt(
@@ -122,16 +162,12 @@ def _build_system_prompt(
                 " Do NOT ask for these values if they are already set."
             )
 
-    voting_tool = "send_poll" if poll_count < poll_threshold else "send_vote_link"
-    voting_action = (
-        f"call `{voting_tool}` (WhatsApp requires ≥2 options)"
-        if poll_count < poll_threshold
-        else f"call `{voting_tool}`"
-    )
+    voting_field = "poll" if poll_count < poll_threshold else "vote_link"
     voting_mechanic = (
-        "once enough people pick the same slot (2 for singles, 4 for doubles), I'll send the booking link!"
+        "once enough people vote for the same slot (2 for singles, 4 for doubles), "
+        "I'll send the booking link!"
         if poll_count < poll_threshold
-        else "Click the link to vote"
+        else "click the link to vote on the web page"
     )
 
     return (
@@ -151,31 +187,38 @@ def _build_system_prompt(
         "`monospace`. No markdown (no #headers, no [links](url), no tables).\n"
         "   For booking links: ALWAYS paste the bare URL on its own line. NEVER wrap it as [text](url).\n"
         "   When your reply has distinct parts (e.g. intro + slot list, or context + booking link), "
-        "call `send_messages` with each part as a separate list item instead of combining them.\n"
+        "put each part as a separate item in respond.text_parts instead of combining them.\n"
         "3. Always reply in the same language the user writes in.\n"
         "4. On first message: detect the user's language and call"
-        " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n\n"
+        " `update_user_profile('language', '<code>')` (e.g. 'de', 'en', 'es').\n"
+        "5. ALWAYS call `respond` exactly once as your final step.\n\n"
         "WORKFLOW:\n"
         "1. Specific club mentioned? -> `find_clubs_by_name` (use SHORT name).\n"
         "2. City/Region mentioned? -> `find_clubs_by_location`.\n"
         "3. Availability needed?\n"
         "   - Single date -> `find_slots` (club slug + date).\n"
-        "   - Multiple days ('next 3 days', 'this weekend', etc.) -> `find_slots_date_range` (start_date + end_date).\n"
+        "   - Multiple days ('next 3 days', 'this weekend', etc.) -> `find_slots_date_range`"
+        " (start_date + end_date).\n"
         "4. Slots found (>0)? -> "
         + (
-            f"If 2+ slots: {voting_action}. If exactly 1 slot: send it as plain text with the booking link — do NOT call `{voting_tool}`.\n"
+            f"If 2+ slots in a group: set respond.{voting_field} (see POLLS/VOTING section).\n"
+            "   If exactly 1 slot, or in a DM: put the slot in respond.text_parts with the booking link.\n"
             if is_group
-            else "List them as a numbered plain text list in your reply.\n"
+            else "Put them as a numbered list in respond.text_parts.\n"
         )
-        + "5. No slots found? -> Tell the user with a sympathetic quip and suggest a different date or time.\n\n"
+        + "5. No slots found? -> Tell the user with a sympathetic quip and suggest a different"
+        " date or time.\n\n"
         + (
             f"POLLS/VOTING LINKS — MANDATORY in groups:\n"
-            f"- ALWAYS use `{voting_tool}` whenever you have 2+ slot options.\n"
-            f"- NEVER list slots as plain text in a group — always use `{voting_tool}`.\n"
-            f"- Pass each slot dict from find_slots directly as-is (it already has 'display' and 'booking_link').\n"
-            f"- Set court_type='SINGLE' if the user is looking for singles courts, otherwise 'DOUBLE'.\n"
-            f"- Always send a short text reply alongside {voting_tool} AND briefly explain the voting mechanic:\n"
-            f"  e.g. 'Vote for all slots that work for you — {voting_mechanic}' (adjust threshold: 2 for singles, 4 for doubles).\n\n"
+            f"- ALWAYS set respond.{voting_field} whenever you have 2+ slot options.\n"
+            f"- NEVER list slots as plain text in a group — always use respond.{voting_field}.\n"
+            f"- Pass each slot dict from find_slots directly into respond.{voting_field}.slots"
+            " (already has 'display' and 'booking_link').\n"
+            f"- Set respond.{voting_field}.court_type='SINGLE' for singles courts, otherwise 'DOUBLE'.\n"
+            f"- Always include at least one text_part alongside {voting_field} that explains the"
+            f" voting mechanic:\n"
+            f"  e.g. 'Vote for all slots that work for you — {voting_mechanic}'"
+            " (threshold: 2 for singles, 4 for doubles).\n\n"
             if is_group
             else ""
         )
@@ -185,6 +228,11 @@ def _build_system_prompt(
         " once for `preferred_club_name`."
         f"{profile_section}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Agent factory
+# ---------------------------------------------------------------------------
 
 
 def create_whatsapp_agent(
@@ -209,6 +257,11 @@ def create_whatsapp_agent(
     )
 
 
+# ---------------------------------------------------------------------------
+# Extraction helpers
+# ---------------------------------------------------------------------------
+
+
 def _extract_tool_message(result: dict, tool_name: str) -> dict | None:
     """Return the parsed dict content of the first tool message matching tool_name."""
     for m in result.get("messages", []):
@@ -225,7 +278,7 @@ def _extract_tool_message(result: dict, tool_name: str) -> dict | None:
 
 
 def extract_final_text(result: dict) -> str:
-    """Extract the last AIMessage text from a LangGraph invoke result."""
+    """Extract the last AIMessage text from a LangGraph invoke result (fallback)."""
     messages = result.get("messages", [])
     for m in reversed(messages):
         is_ai = (
@@ -247,48 +300,13 @@ def extract_final_text(result: dict) -> str:
     return ""
 
 
-def extract_message_parts(result: dict) -> list[str]:
-    """Scan tool messages for a wa_messages payload from send_messages."""
-    payload = _extract_tool_message(result, send_messages.name)
-    if payload:
-        parts = payload.get("wa_messages")
-        if isinstance(parts, list):
-            return [str(p) for p in parts if p]
-    return []
-
-
-def extract_poll_data(result: dict) -> "dict[str, Any] | None":
-    """Scan tool messages for a wa_poll payload from send_poll."""
-    payload = _extract_tool_message(result, send_poll.name)
-    if payload:
-        wa_poll = payload.get("wa_poll")
-        if isinstance(wa_poll, dict):
-            return wa_poll
-    return None
-
-
-def extract_vote_link_data(result: dict) -> "dict[str, Any] | None":
-    """Scan tool messages for a wa_vote_link payload from send_vote_link."""
-    payload = _extract_tool_message(result, send_vote_link.name)
-    if payload:
-        wa_vote_link = payload.get("wa_vote_link")
-        if isinstance(wa_vote_link, dict):
-            return wa_vote_link
-    return None
-
-
-def extract_preference_updates(result: dict) -> dict:
-    """Scan tool messages for profile_update payloads from update_user_profile."""
-    updates: dict = {}
-    for m in result.get("messages", []):
-        if getattr(m, "name", None) != update_user_profile.name:
-            continue
-        content = getattr(m, "content", "")
-        try:
-            parsed = json.loads(content) if isinstance(content, str) else content
-            if isinstance(parsed, dict) and "profile_update" in parsed:
-                upd = parsed["profile_update"]
-                updates[upd["key"]] = upd["value"]
-        except (json.JSONDecodeError, TypeError, KeyError):
-            pass
-    return updates
+def extract_response(result: dict) -> WAResponse | None:
+    """Return the WAResponse from the respond tool call, or None if not found."""
+    payload = _extract_tool_message(result, respond.name)
+    if payload is None:
+        return None
+    try:
+        return WAResponse.model_validate(payload)
+    except Exception:
+        logger.warning("respond tool returned invalid WAResponse payload: %s", payload)
+        return None

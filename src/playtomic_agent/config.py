@@ -80,15 +80,15 @@ class Settings(BaseSettings):
         alias="WHATSAPP_SESSION_DB",
         description="Path to the SQLite file where Neonize stores the WhatsApp session",
     )
-    whatsapp_storage_path: str = Field(
-        default="data/whatsapp_users.json",
+    whatsapp_db_path: str = Field(
+        default="data/whatsapp_users.db",
         alias="WHATSAPP_STORAGE_PATH",
-        description="Path to the JSON file storing per-user WhatsApp state",
+        description="Path to the SQLite DB storing per-user WhatsApp state",
     )
     whatsapp_clear_storage_on_start: bool = Field(
         default=False,
         alias="WHATSAPP_CLEAR_STORAGE_ON_START",
-        description="If true, delete the user storage file on startup (useful for resetting state in production)",
+        description="If true, delete the user state DB on startup (useful for resetting state in production)",
     )
     whatsapp_phone_number: str | None = Field(
         default=None,

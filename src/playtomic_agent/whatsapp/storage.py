@@ -1,7 +1,8 @@
+import datetime
 import json
 import logging
 import os
-import tempfile
+import sqlite3
 import threading
 from dataclasses import dataclass, field
 
@@ -20,58 +21,105 @@ class UserState:
 
 
 class UserStorage:
-    """Thread-safe JSON-backed store keyed by WhatsApp sender phone number.
+    """Thread-safe SQLite-backed store keyed by WhatsApp sender ID.
 
-    The storage file is a flat JSON object mapping sender IDs to their state.
-    Writes are atomic: data is written to a temp file and then renamed.
+    Schema: single table ``user_states`` with JSON-serialised columns for
+    profile, history and active_poll.  Mirrors the VoteStore pattern
+    (WAL mode, _connect / _init_db, ``with conn:`` transactions).
     """
 
     def __init__(self, path: str) -> None:
         self._path = path
         self._lock = threading.Lock()
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        self._init_db()
 
-    def _read_all(self) -> dict[str, dict]:
-        if not os.path.exists(self._path):
-            return {}
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self._path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
+
+    def _init_db(self) -> None:
+        conn = self._connect()
         try:
-            with open(self._path) as f:
-                data = json.load(f)
-                return data if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, OSError):
-            logger.warning("Could not read user storage at %s, starting fresh", self._path)
-            return {}
+            with conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS user_states (
+                        sender_id   TEXT PRIMARY KEY,
+                        profile     TEXT NOT NULL DEFAULT '{}',
+                        history     TEXT NOT NULL DEFAULT '[]',
+                        language    TEXT NOT NULL DEFAULT '',
+                        active_poll TEXT,
+                        poll_count  INTEGER NOT NULL DEFAULT 0,
+                        updated_at  TEXT NOT NULL
+                    )
+                """)
+        finally:
+            conn.close()
 
-    def _write_all(self, data: dict) -> None:
-        dir_ = os.path.dirname(os.path.abspath(self._path))
-        with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, suffix=".tmp") as tmp:
-            json.dump(data, tmp, ensure_ascii=False, indent=2)
-            tmp_path = tmp.name
-        os.replace(tmp_path, self._path)
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def load(self, sender_id: str) -> UserState:
         """Return the stored state for a sender, or an empty UserState if unknown."""
         with self._lock:
-            all_data = self._read_all()
-        raw = all_data.get(sender_id, {})
+            conn = self._connect()
+            try:
+                row = conn.execute(
+                    "SELECT profile, history, language, active_poll, poll_count "
+                    "FROM user_states WHERE sender_id = ?",
+                    (sender_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+        if row is None:
+            return UserState()
         return UserState(
-            profile=raw.get("profile", {}),
-            history=raw.get("history", []),
-            language=raw.get("language", ""),
-            active_poll=raw.get("active_poll"),
-            poll_count=raw.get("poll_count", 0),
+            profile=json.loads(row["profile"]),
+            history=json.loads(row["history"]),
+            language=row["language"],
+            active_poll=json.loads(row["active_poll"]) if row["active_poll"] else None,
+            poll_count=row["poll_count"],
         )
 
     def save(self, sender_id: str, state: UserState) -> None:
         """Persist the state for a sender."""
+        now = datetime.datetime.now(datetime.UTC).isoformat()
         with self._lock:
-            all_data = self._read_all()
-            all_data[sender_id] = {
-                "profile": state.profile,
-                "history": state.history,
-                "language": state.language,
-                "active_poll": state.active_poll,
-                "poll_count": state.poll_count,
-            }
-            self._write_all(all_data)
+            conn = self._connect()
+            try:
+                with conn:
+                    conn.execute(
+                        """
+                        INSERT INTO user_states
+                            (sender_id, profile, history, language, active_poll, poll_count, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(sender_id) DO UPDATE SET
+                            profile     = excluded.profile,
+                            history     = excluded.history,
+                            language    = excluded.language,
+                            active_poll = excluded.active_poll,
+                            poll_count  = excluded.poll_count,
+                            updated_at  = excluded.updated_at
+                        """,
+                        (
+                            sender_id,
+                            json.dumps(state.profile, ensure_ascii=False),
+                            json.dumps(state.history, ensure_ascii=False),
+                            state.language,
+                            json.dumps(state.active_poll, ensure_ascii=False)
+                            if state.active_poll is not None
+                            else None,
+                            state.poll_count,
+                            now,
+                        ),
+                    )
+            finally:
+                conn.close()
         logger.debug("Saved state for sender %s", sender_id)
