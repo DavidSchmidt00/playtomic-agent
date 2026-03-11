@@ -19,8 +19,26 @@ from playtomic_agent.whatsapp.agent import (
 )
 from playtomic_agent.whatsapp.storage import UserState
 
-_SLOT_A = {"display": "Mo | 01.03 | 18:00 | 90 min", "booking_link": "https://x"}
-_SLOT_B = {"display": "Mo | 01.03 | 19:30 | 60 min", "booking_link": "https://y"}
+_SLOT_A = {
+    "display": "Mo | 01.03 | 18:00 | 90 min",
+    "date": "2026-03-01",
+    "local_time": "18:00",
+    "court": "Court 1",
+    "court_type": "DOUBLE",
+    "duration": 90,
+    "price": "20.00 EUR",
+    "booking_link": "https://x",
+}
+_SLOT_B = {
+    "display": "Mo | 01.03 | 19:30 | 60 min",
+    "date": "2026-03-01",
+    "local_time": "19:30",
+    "court": "Court 2",
+    "court_type": "DOUBLE",
+    "duration": 60,
+    "price": "15.00 EUR",
+    "booking_link": "https://y",
+}
 
 
 # ---------------------------------------------------------------------------

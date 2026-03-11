@@ -438,6 +438,7 @@ async def _dispatch_wa_response(
                     {
                         "display": s.display,
                         "booking_link": s.booking_link,
+                        "court_type": s.court_type,
                         "voters": [],
                     }
                     for s in vl.slots
