@@ -76,7 +76,14 @@ async def consensus_webhook(req: Request):
 
         # _send_text is a coroutine on the neonize event loop — dispatch safely
         # across the loop boundary from uvicorn's loop.
-        asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        fut = asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        fut.add_done_callback(
+            lambda f: (
+                logger.error("consensus _send_text failed: %s", f.exception())
+                if not f.cancelled() and f.exception()
+                else None
+            )
+        )
         logger.info("Sent consensus webhook notification to %s for vote %s", group_jid, vote_id)
 
     return {"status": "ok"}
@@ -368,7 +375,7 @@ async def _dispatch_wa_response(
     # --- Poll dispatch ---
     if response.poll is not None:
         poll = response.poll
-        display_options = [s.get("display", "") for s in poll.slots]
+        display_options = [s.display for s in poll.slots]
         if len(display_options) < 2:
             logger.warning("respond.poll has <2 options — skipping poll send")
         else:
@@ -384,9 +391,9 @@ async def _dispatch_wa_response(
                 "court_type": poll.court_type,
                 "options": [
                     {
-                        "display": s.get("display", ""),
-                        "booking_link": s.get("booking_link", ""),
-                        "court_type": s.get("court_type"),
+                        "display": s.display,
+                        "booking_link": s.booking_link,
+                        "court_type": s.court_type,
                         "voters": [],
                     }
                     for s in poll.slots
@@ -408,9 +415,9 @@ async def _dispatch_wa_response(
             logger.warning("respond.vote_link has <2 options — skipping")
             return
         payload = {
-            "slots": vl.slots,
+            "slots": [s.model_dump() for s in vl.slots],
             "metadata": {
-                "group_jid": str(sender_jid),
+                "group_jid": f"{sender_jid.User}@{sender_jid.Server}",
             },
         }
         resp = None
@@ -429,8 +436,9 @@ async def _dispatch_wa_response(
                 "court_type": vl.court_type,
                 "options": [
                     {
-                        "display": s.get("display", ""),
-                        "booking_link": s.get("booking_link", ""),
+                        "display": s.display,
+                        "booking_link": s.booking_link,
+                        "court_type": s.court_type,
                         "voters": [],
                     }
                     for s in vl.slots

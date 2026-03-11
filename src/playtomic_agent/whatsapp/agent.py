@@ -69,15 +69,26 @@ def update_user_profile(
 # ---------------------------------------------------------------------------
 
 
+class WASlot(BaseModel):
+    display: str
+    date: str  # YYYY-MM-DD
+    local_time: str  # HH:MM
+    court: str
+    court_type: str | None = None
+    duration: int
+    price: str
+    booking_link: str
+
+
 class WAPoll(BaseModel):
     question: str
-    slots: list[dict]
+    slots: list[WASlot]
     court_type: str = "DOUBLE"
 
 
 class WAVoteLink(BaseModel):
     question: str
-    slots: list[dict]
+    slots: list[WASlot]
     court_type: str = "DOUBLE"
 
 
@@ -213,7 +224,7 @@ def _build_system_prompt(
             f"- ALWAYS set respond.{voting_field} whenever you have 2+ slot options.\n"
             f"- NEVER list slots as plain text in a group — always use respond.{voting_field}.\n"
             f"- Pass each slot dict from find_slots directly into respond.{voting_field}.slots"
-            " (already has 'display' and 'booking_link').\n"
+            " (include ALL fields: display, date, local_time, court, court_type, duration, price, booking_link).\n"
             f"- Set respond.{voting_field}.court_type='SINGLE' for singles courts, otherwise 'DOUBLE'.\n"
             f"- Always include at least one text_part alongside {voting_field} that explains the"
             f" voting mechanic:\n"
