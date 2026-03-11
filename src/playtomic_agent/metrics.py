@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from langchain_core.callbacks import BaseCallbackHandler
 from prometheus_client import Counter, Gauge, Histogram
 from prometheus_client import make_asgi_app as _make_asgi_app
 
@@ -69,10 +70,11 @@ _PLAYTOMIC_TOOLS = frozenset(
 )
 
 
-class UsageCallbackHandler:
+class UsageCallbackHandler(BaseCallbackHandler):
     """LangChain callback that records Gemini token usage and tool calls to Prometheus."""
 
     def __init__(self, channel: str) -> None:
+        super().__init__()
         self._channel = channel
 
     def on_llm_end(self, response: Any, **kwargs: object) -> None:
