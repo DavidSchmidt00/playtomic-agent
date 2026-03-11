@@ -2,8 +2,9 @@
 
 import json
 import logging
+import time
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import requests
@@ -15,6 +16,7 @@ from playtomic_agent.client.exceptions import (
     ValidationError,
 )
 from playtomic_agent.config import get_settings
+from playtomic_agent.metrics import PLAYTOMIC_LATENCY, PLAYTOMIC_REQUESTS, PLAYTOMIC_SCHEMA_ERRORS
 from playtomic_agent.models import Club, Court, Slot
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,21 @@ class PlaytomicClient:
         """Close the HTTP session."""
         self.session.close()
 
+    def _request(self, endpoint: str, **kwargs: Any) -> requests.Response:
+        """Instrumented GET wrapper — records latency and request outcome."""
+        start = time.perf_counter()
+        status = "success"
+        try:
+            resp = self.session.get(f"{self.api_base_url}/{endpoint}", **kwargs)
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException:
+            status = "error"
+            raise
+        finally:
+            PLAYTOMIC_REQUESTS.labels(endpoint=endpoint, status=status).inc()
+            PLAYTOMIC_LATENCY.labels(endpoint=endpoint).observe(time.perf_counter() - start)
+
     def get_club(self, slug: str | None = None, name: str | None = None) -> Club:
         """Fetch club information by slug or name.
 
@@ -88,12 +105,7 @@ class PlaytomicClient:
             elif name:
                 params["tenant_name"] = name
 
-            response = self.session.get(
-                f"{self.api_base_url}/tenants",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
+            response = self._request("tenants", params=params, timeout=10)
         except requests.RequestException as e:
             raise APIError(
                 f"Failed to fetch club with {search_type}: {identifier}",
@@ -136,6 +148,7 @@ class PlaytomicClient:
             return club
 
         except (KeyError, TypeError) as e:
+            PLAYTOMIC_SCHEMA_ERRORS.inc()
             raise APIError(f"Failed to parse club data: {e}") from e
 
     def geocode(self, query: str, country_code: str | None = None) -> tuple[float, float] | None:
@@ -194,12 +207,7 @@ class PlaytomicClient:
             else:
                 params = {"tenant_name": query}
 
-            response = self.session.get(
-                f"{self.api_base_url}/tenants",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
+            response = self._request("tenants", params=params, timeout=10)
         except requests.RequestException as e:
             raise APIError(f"Failed to search clubs with query: {query}") from e
 
@@ -283,12 +291,7 @@ class PlaytomicClient:
         }
 
         try:
-            response = self.session.get(
-                f"{self.api_base_url}/availability",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
+            response = self._request("availability", params=params, timeout=10)
         except requests.RequestException as e:
             raise APIError(
                 f"Failed to fetch availability for {club.name}",
