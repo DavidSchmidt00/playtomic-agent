@@ -44,3 +44,52 @@ def test_whatsapp_failures_counter_exists():
         {"failure_type": "ban"},
     )
     assert after == before + 1.0
+
+
+def test_playtomic_request_counter_exists():
+    from playtomic_agent.metrics import PLAYTOMIC_REQUESTS
+
+    before = _get_sample_value(
+        "playtomic_api_requests_total",
+        {"endpoint": "tenants", "status": "success"},
+    )
+    PLAYTOMIC_REQUESTS.labels(endpoint="tenants", status="success").inc()
+    after = _get_sample_value(
+        "playtomic_api_requests_total",
+        {"endpoint": "tenants", "status": "success"},
+    )
+    assert after == before + 1.0
+
+
+def test_playtomic_latency_histogram_exists():
+    from playtomic_agent.metrics import PLAYTOMIC_LATENCY
+
+    PLAYTOMIC_LATENCY.labels(endpoint="availability").observe(0.5)
+    # just check no exception raised
+
+
+def test_playtomic_schema_error_counter_exists():
+    from playtomic_agent.metrics import PLAYTOMIC_SCHEMA_ERRORS
+
+    before = _get_sample_value("playtomic_api_schema_errors_total")
+    PLAYTOMIC_SCHEMA_ERRORS.inc()
+    after = _get_sample_value("playtomic_api_schema_errors_total")
+    assert after == before + 1.0
+
+
+def test_llm_input_tokens_counter_exists():
+    from playtomic_agent.metrics import LLM_INPUT_TOKENS
+
+    before = _get_sample_value("llm_input_tokens_total", {"channel": "web"})
+    LLM_INPUT_TOKENS.labels(channel="web").inc(100)
+    after = _get_sample_value("llm_input_tokens_total", {"channel": "web"})
+    assert after == before + 100.0
+
+
+def test_llm_output_tokens_counter_exists():
+    from playtomic_agent.metrics import LLM_OUTPUT_TOKENS
+
+    before = _get_sample_value("llm_output_tokens_total", {"channel": "whatsapp"})
+    LLM_OUTPUT_TOKENS.labels(channel="whatsapp").inc(50)
+    after = _get_sample_value("llm_output_tokens_total", {"channel": "whatsapp"})
+    assert after == before + 50.0
