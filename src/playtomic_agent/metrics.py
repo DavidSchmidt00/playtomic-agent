@@ -1,11 +1,11 @@
-"""Prometheus metrics for Padel Agent (OPS-1, OPS-2, OPS-3)."""
+"""Prometheus metrics for Padel Agent."""
 
 from typing import Any
 
 from prometheus_client import Counter, Gauge, Histogram
 from prometheus_client import make_asgi_app as _make_asgi_app
 
-# ── OPS-3: WhatsApp connection ───────────────────────────────────────────────
+# ── WhatsApp connection ──────────────────────────────────────────────────────
 WA_CONNECTED = Gauge(
     "whatsapp_connected",
     "1 when connected to WhatsApp, 0 when disconnected",
@@ -20,7 +20,7 @@ WA_MESSAGES = Counter(
     "WhatsApp messages passed to the agent",
 )
 
-# ── OPS-2: Playtomic API health ──────────────────────────────────────────────
+# ── Playtomic API health ─────────────────────────────────────────────────────
 PLAYTOMIC_REQUESTS = Counter(
     "playtomic_api_requests",
     "Playtomic API HTTP requests",
@@ -37,7 +37,7 @@ PLAYTOMIC_SCHEMA_ERRORS = Counter(
     "Playtomic API responses that failed Pydantic schema validation",
 )
 
-# ── OPS-1: LLM usage ────────────────────────────────────────────────────────
+# ── LLM usage ───────────────────────────────────────────────────────────────
 LLM_INPUT_TOKENS = Counter(
     "llm_input_tokens",
     "LLM input tokens consumed",
