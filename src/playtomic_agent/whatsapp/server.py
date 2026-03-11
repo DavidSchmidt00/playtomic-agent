@@ -19,7 +19,7 @@ from neonize.aioze.events import (
     MessageEv,
     OfflineSyncCompletedEv,
 )
-from neonize.proto.Neonize_pb2 import ConnectFailureReason
+from neonize.proto.Neonize_pb2 import JID, ConnectFailureReason
 from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
 from neonize.utils.enum import ChatPresence, ChatPresenceMedia, ReceiptType, VoteType
 from neonize.utils.message import extract_text, get_poll_update_message
@@ -66,6 +66,11 @@ async def consensus_webhook(req: Request):
     wa_client = getattr(webhook_app.state, "wa_client", None)
     neonize_loop = getattr(webhook_app.state, "neonize_loop", None)
     if wa_client and neonize_loop and group_jid and display:
+        # Parse "user@server" string back into a neonize JID object, which
+        # send_message / send_chat_presence require (plain strings are rejected).
+        user, _, server = group_jid.partition("@")
+        jid_obj = JID(User=user, Server=server)
+
         msg = (
             f"🎉 *Buchungs-Empfehlung erreicht!*\n\n"
             f"{voter_count} Leute haben für diesen Slot abgestimmt:\n*{display}*\n\n"
@@ -76,7 +81,7 @@ async def consensus_webhook(req: Request):
 
         # _send_text is a coroutine on the neonize event loop — dispatch safely
         # across the loop boundary from uvicorn's loop.
-        fut = asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        fut = asyncio.run_coroutine_threadsafe(_send_text(wa_client, jid_obj, msg), neonize_loop)
         fut.add_done_callback(
             lambda f: (
                 logger.error("consensus _send_text failed: %s", f.exception())
