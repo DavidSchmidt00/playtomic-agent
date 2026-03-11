@@ -407,12 +407,10 @@ async def _dispatch_wa_response(
         if len(vl.slots) < 2:
             logger.warning("respond.vote_link has <2 options — skipping")
             return
-        threshold = 2 if vl.court_type == "SINGLE" else 4
         payload = {
             "slots": vl.slots,
             "metadata": {
                 "group_jid": str(sender_jid),
-                "threshold": threshold,
             },
         }
         resp = None
