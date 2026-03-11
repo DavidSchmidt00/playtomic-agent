@@ -145,6 +145,10 @@ module = "neonize.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "prometheus_client.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 # slowapi's handler signature (Request, RateLimitExceeded) is narrower than
 # FastAPI's expected (Request, Exception); suppress env-dependent false positives.
 module = "playtomic_agent.web.api"
