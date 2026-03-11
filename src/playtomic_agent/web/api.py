@@ -512,15 +512,14 @@ async def cast_vote(vote_id: str, req: CastVoteRequest, background_tasks: Backgr
     # Task 6: Trigger Webhook from Web API
     metadata = session.get("metadata") or {}
     notified_slots = set(session.get("notified_slots") or [])
-    threshold = metadata.get("threshold")
     group_jid = metadata.get("group_jid")
 
-    if threshold and group_jid:
+    if group_jid:
         webhook_url = get_settings().whatsapp_webhook_url
         for sid, count in session["tally"].items():
-            if count >= threshold and sid not in notified_slots:
-                # Find slot display info
-                slot_info = next((s for s in session["slots"] if s["slot_id"] == sid), None)
+            slot_info = next((s for s in session["slots"] if s["slot_id"] == sid), None)
+            slot_threshold = 2 if slot_info and slot_info.get("court_type") == "SINGLE" else 4
+            if count >= slot_threshold and sid not in notified_slots:
                 if slot_info:
                     vote_store.mark_notified(vote_id, sid)
                     notified_slots.add(sid)
