@@ -205,9 +205,18 @@ async def _handle_poll_vote(
             logger.info("Poll vote received for %s but no active_poll stored — ignoring", sender_id)
             return
 
-        # Only handle votes for the current active poll
+        # Only handle votes for native WhatsApp polls (vote-link polls store "vote_id",
+        # not "message_id" — skip them to avoid KeyError).
+        stored_id = user_state.active_poll.get("message_id")
+        if stored_id is None:
+            logger.info(
+                "Poll vote received for %s but active_poll has no message_id "
+                "(vote-link poll active) — ignoring",
+                sender_id,
+            )
+            return
+
         received_id = poll_update.pollCreationMessageKey.ID
-        stored_id = user_state.active_poll["message_id"]
         if received_id != stored_id:
             logger.info(
                 "Poll vote ID mismatch in %s: received=%r stored=%r — ignoring",
