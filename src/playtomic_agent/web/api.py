@@ -11,8 +11,9 @@ from zoneinfo import ZoneInfo
 import requests
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -22,7 +23,7 @@ from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.config import get_settings
 from playtomic_agent.context import get_timezone, set_request_region
-from playtomic_agent.metrics import UsageCallbackHandler, metrics_app
+from playtomic_agent.metrics import UsageCallbackHandler
 from playtomic_agent.web.agent import create_playtomic_agent
 from playtomic_agent.web.vote_store import InvalidSlotError as _InvalidSlotError
 from playtomic_agent.web.vote_store import SessionNotFoundError as _SessionNotFoundError
@@ -32,7 +33,13 @@ from playtomic_agent.web.vote_store import VoteStore
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Playtomic Agent API")
-app.mount("/metrics", metrics_app)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics_endpoint():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 _vote_store: VoteStore | None = None
 
 
