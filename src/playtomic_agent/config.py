@@ -144,6 +144,13 @@ class Settings(BaseSettings):
         description="Public base URL for sharing vote links outside the dev environment.",
     )
 
+    # Alerting (OPS-3)
+    whatsapp_alert_webhook_url: str | None = Field(
+        default=None,
+        alias="WHATSAPP_ALERT_WEBHOOK_URL",
+        description="HTTP webhook URL to POST when WhatsApp disconnects or is banned.",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
