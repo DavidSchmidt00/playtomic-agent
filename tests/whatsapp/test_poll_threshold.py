@@ -21,8 +21,26 @@ def _make_wa_client():
 
 
 _MIXED_SLOTS = [
-    {"display": "SINGLE slot", "booking_link": "https://a", "court_type": "SINGLE"},
-    {"display": "DOUBLE slot", "booking_link": "https://b", "court_type": "DOUBLE"},
+    {
+        "display": "SINGLE slot",
+        "date": "2026-03-01",
+        "local_time": "18:00",
+        "court": "Court 1",
+        "court_type": "SINGLE",
+        "duration": 90,
+        "price": "20.00 EUR",
+        "booking_link": "https://a",
+    },
+    {
+        "display": "DOUBLE slot",
+        "date": "2026-03-01",
+        "local_time": "19:30",
+        "court": "Court 2",
+        "court_type": "DOUBLE",
+        "duration": 90,
+        "price": "20.00 EUR",
+        "booking_link": "https://b",
+    },
 ]
 
 
