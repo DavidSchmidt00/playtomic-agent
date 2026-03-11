@@ -458,7 +458,7 @@ async def search_slots(req: SearchRequest):
                                 duration=slot.duration,
                                 price=slot.price,
                                 booking_link=slot.get_link(),
-                                court_type=req.court_type,
+                                court_type=slot.court_type,
                             )
                         )
     except ClubNotFoundError as exc:
