@@ -3,10 +3,10 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: padel-web
+  - job_name: padel-agent
     static_configs:
-      - targets: ['padel-web.railway.internal:8082']
+      - targets: ['padel-agent.railway.internal:8082']
 
-  - job_name: padel-whatsapp
+  - job_name: whatsapp-agent
     static_configs:
-      - targets: ['padel-whatsapp.railway.internal:8081']
+      - targets: ['whatsapp-agent.railway.internal:8081']
