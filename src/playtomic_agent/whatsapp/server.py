@@ -28,7 +28,7 @@ from neonize.utils.message import extract_text, get_poll_update_message
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.log_config import setup_logging
-from playtomic_agent.metrics import metrics_app
+from playtomic_agent.metrics import WA_CONNECTED, WA_FAILURES, WA_MESSAGES, metrics_app
 from playtomic_agent.whatsapp.agent import (
     WAResponse,
     create_whatsapp_agent,
@@ -551,6 +551,7 @@ def main() -> None:
         nonlocal _ready
         _ready = True
         logger.info("Offline sync complete — bot is now processing incoming messages")
+        WA_CONNECTED.set(1)
 
     _PERMANENT_FAILURES = {
         ConnectFailureReason.LOGGED_OUT,
@@ -563,11 +564,19 @@ def main() -> None:
 
     @client.event(ConnectFailureEv)
     async def on_connect_failure(wa_client: NewAClient, event: ConnectFailureEv) -> None:
+        failure_type = "ban" if event.Reason in _PERMANENT_FAILURES else "transient"
+        WA_FAILURES.labels(failure_type=failure_type).inc()
+        WA_CONNECTED.set(0)
         if event.Reason in _PERMANENT_FAILURES:
             logger.error(
                 "WhatsApp connection permanently failed (reason=%s message=%s) — manual intervention may be required",
                 event.Reason,
                 event.Message,
+            )
+            await _fire_alert(
+                event="connect_failure",
+                reason=str(event.Reason),
+                message=event.Message,
             )
         else:
             logger.warning(
@@ -583,6 +592,13 @@ def main() -> None:
             "WhatsApp session logged out (reason=%s on_connect=%s) — deleting session and exiting",
             event.Reason,
             event.OnConnect,
+        )
+        WA_FAILURES.labels(failure_type="logged_out").inc()
+        WA_CONNECTED.set(0)
+        await _fire_alert(
+            event="logged_out",
+            reason=str(event.Reason),
+            message="Session invalidated",
         )
         try:
             os.remove(settings.whatsapp_session_db)
@@ -642,6 +658,7 @@ def main() -> None:
         if not _ready:
             return
 
+        WA_MESSAGES.inc()
         sender_jid = message.Info.MessageSource.Chat
         sender_id = f"{sender_jid.User}@{sender_jid.Server}"
 
