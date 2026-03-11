@@ -229,16 +229,12 @@ async def _handle_poll_vote(
         voter_jid = (
             f"{message.Info.MessageSource.Sender.User}@{message.Info.MessageSource.Sender.Server}"
         )
-        court_type = user_state.active_poll.get("court_type", "DOUBLE")
-        threshold = 2 if court_type == "SINGLE" else 4
-
         n_selected = len(poll_vote.selectedOptions)
         logger.info(
-            "Poll vote from %s in %s: %d option(s) selected, threshold=%d",
+            "Poll vote from %s in %s: %d option(s) selected",
             voter_jid,
             sender_id,
             n_selected,
-            threshold,
         )
 
         opt_hash_map = {
@@ -273,26 +269,29 @@ async def _handle_poll_vote(
             return
         storage.save(sender_id, user_state)
 
-        # Find options that just hit threshold and haven't been notified yet.
+        # Find options that just hit their per-court-type threshold and haven't been notified.
+        # SINGLE courts need 2 votes; DOUBLE courts need 4.
         # We keep the poll alive (don't clear active_poll) so other options can
         # still accumulate votes and trigger their own notifications later.
         ready = [
             o
             for o in user_state.active_poll["options"]
-            if len(o["voters"]) >= threshold and not o.get("notified")
+            if len(o["voters"]) >= (2 if o.get("court_type") == "SINGLE" else 4)
+            and not o.get("notified")
         ]
         if ready:
             for option in ready:
                 option["notified"] = True
             storage.save(sender_id, user_state)
             for option in ready:
+                option_threshold = 2 if option.get("court_type") == "SINGLE" else 4
                 logger.info(
                     "Poll threshold reached in %s for '%s' (%d voters)",
                     sender_id,
                     option["display"],
                     len(option["voters"]),
                 )
-                await _notify_booking_threshold(wa_client, sender_jid, option, threshold)
+                await _notify_booking_threshold(wa_client, sender_jid, option, option_threshold)
 
 
 async def _notify_booking_threshold(
@@ -387,6 +386,7 @@ async def _dispatch_wa_response(
                     {
                         "display": s.get("display", ""),
                         "booking_link": s.get("booking_link", ""),
+                        "court_type": s.get("court_type"),
                         "voters": [],
                     }
                     for s in poll.slots
