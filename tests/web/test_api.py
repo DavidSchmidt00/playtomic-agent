@@ -296,3 +296,9 @@ def test_clubs_api_error_returns_502():
         res = client.get("/api/clubs?q=lemon")
 
     assert res.status_code == 502
+
+
+def test_metrics_endpoint_returns_200():
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert "playtomic_api_requests_total" in resp.text

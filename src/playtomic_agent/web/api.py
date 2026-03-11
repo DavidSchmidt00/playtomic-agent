@@ -22,6 +22,7 @@ from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.config import get_settings
 from playtomic_agent.context import get_timezone, set_request_region
+from playtomic_agent.metrics import metrics_app
 from playtomic_agent.web.agent import create_playtomic_agent
 from playtomic_agent.web.vote_store import InvalidSlotError as _InvalidSlotError
 from playtomic_agent.web.vote_store import SessionNotFoundError as _SessionNotFoundError
@@ -31,6 +32,7 @@ from playtomic_agent.web.vote_store import VoteStore
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Playtomic Agent API")
+app.mount("/metrics", metrics_app)
 _vote_store: VoteStore | None = None
 
 
