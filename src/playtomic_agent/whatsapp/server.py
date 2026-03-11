@@ -5,8 +5,10 @@ import logging
 import os
 import random
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Any
 
+import httpx
 import requests
 import uvicorn
 from fastapi import FastAPI, Request
@@ -50,6 +52,25 @@ def _group_intro() -> str:
         "Ihr könnt auch einfach auf meine Nachricht antworten (Swipe über meine Nachricht)\n\n"
         f"Übrigens: Mich gibts auch auf {get_settings().web_public_base_url} 🌐"
     )
+
+
+async def _fire_alert(*, event: str, reason: str, message: str) -> None:
+    """POST a JSON alert to WHATSAPP_ALERT_WEBHOOK_URL. Fire-and-forget; never raises."""
+    url = get_settings().whatsapp_alert_webhook_url
+    if not url:
+        return
+    payload = {
+        "event": event,
+        "reason": reason,
+        "message": message,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(url, json=payload)
+        logger.info("Alert fired: event=%s reason=%s", event, reason)
+    except Exception as exc:
+        logger.warning("Failed to fire alert (event=%s): %s", event, exc)
 
 
 webhook_app = FastAPI(title="WhatsApp Webhook Receiver")
