@@ -76,7 +76,14 @@ async def consensus_webhook(req: Request):
 
         # _send_text is a coroutine on the neonize event loop — dispatch safely
         # across the loop boundary from uvicorn's loop.
-        asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        fut = asyncio.run_coroutine_threadsafe(_send_text(wa_client, group_jid, msg), neonize_loop)
+        fut.add_done_callback(
+            lambda f: (
+                logger.error("consensus _send_text failed: %s", f.exception())
+                if not f.cancelled() and f.exception()
+                else None
+            )
+        )
         logger.info("Sent consensus webhook notification to %s for vote %s", group_jid, vote_id)
 
     return {"status": "ok"}
@@ -410,7 +417,7 @@ async def _dispatch_wa_response(
         payload = {
             "slots": vl.slots,
             "metadata": {
-                "group_jid": str(sender_jid),
+                "group_jid": f"{sender_jid.User}@{sender_jid.Server}",
             },
         }
         resp = None
