@@ -732,16 +732,17 @@ def main() -> None:
 
             stop_typing = asyncio.Event()
             typing_task = asyncio.create_task(_keep_typing(stop_typing))
-            result = None
+            result: dict | None = None
             timed_out = False
             wa_response: WAResponse | None = None
             final_text = ""
             try:
                 result = await asyncio.wait_for(
                     asyncio.to_thread(
-                        agent.invoke,
-                        {"messages": messages},
-                        {"recursion_limit": 30},
+                        lambda: agent.invoke(
+                            {"messages": messages},
+                            {"recursion_limit": 30},
+                        )
                     ),
                     timeout=settings.agent_timeout_seconds,
                 )
