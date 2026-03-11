@@ -375,7 +375,7 @@ async def _dispatch_wa_response(
     # --- Poll dispatch ---
     if response.poll is not None:
         poll = response.poll
-        display_options = [s.get("display", "") for s in poll.slots]
+        display_options = [s.display for s in poll.slots]
         if len(display_options) < 2:
             logger.warning("respond.poll has <2 options — skipping poll send")
         else:
@@ -391,9 +391,9 @@ async def _dispatch_wa_response(
                 "court_type": poll.court_type,
                 "options": [
                     {
-                        "display": s.get("display", ""),
-                        "booking_link": s.get("booking_link", ""),
-                        "court_type": s.get("court_type"),
+                        "display": s.display,
+                        "booking_link": s.booking_link,
+                        "court_type": s.court_type,
                         "voters": [],
                     }
                     for s in poll.slots
@@ -415,7 +415,7 @@ async def _dispatch_wa_response(
             logger.warning("respond.vote_link has <2 options — skipping")
             return
         payload = {
-            "slots": vl.slots,
+            "slots": [s.model_dump() for s in vl.slots],
             "metadata": {
                 "group_jid": f"{sender_jid.User}@{sender_jid.Server}",
             },
@@ -436,8 +436,8 @@ async def _dispatch_wa_response(
                 "court_type": vl.court_type,
                 "options": [
                     {
-                        "display": s.get("display", ""),
-                        "booking_link": s.get("booking_link", ""),
+                        "display": s.display,
+                        "booking_link": s.booking_link,
                         "voters": [],
                     }
                     for s in vl.slots
