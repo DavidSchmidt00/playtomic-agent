@@ -105,3 +105,16 @@ class TestSlot:
         assert "club-123" in link
         assert "court-1" in link
         assert "duration=90" in link
+
+    def test_slot_carries_court_type(self):
+        """Slot model accepts and preserves a court_type field."""
+        slot = Slot(
+            club_id="club-123",
+            court_id="court-1",
+            court_name="Court 1",
+            time=datetime(2026, 2, 15, 10, 0, 0, tzinfo=ZoneInfo("UTC")),
+            duration=90,
+            price="25.00 EUR",
+            court_type="SINGLE",
+        )
+        assert slot.court_type == "SINGLE"

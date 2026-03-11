@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
+
 from playtomic_agent.models import Club, Court, Slot
 
 

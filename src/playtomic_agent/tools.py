@@ -72,6 +72,7 @@ def find_slots(
                         "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                         "date": s.time.astimezone(tz).strftime("%Y-%m-%d"),
                         "court": s.court_name,
+                        "court_type": s.court_type,
                         "duration": s.duration,
                         "price": s.price,
                         "booking_link": _make_link(
@@ -178,6 +179,7 @@ def find_slots_date_range(
                                 "local_time": s.time.astimezone(tz).strftime("%H:%M"),
                                 "date": s.time.astimezone(tz).strftime("%Y-%m-%d"),
                                 "court": s.court_name,
+                                "court_type": s.court_type,
                                 "duration": s.duration,
                                 "price": s.price,
                                 "booking_link": _make_link(

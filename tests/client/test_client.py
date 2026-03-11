@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+
 from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import (
     APIError,
@@ -118,6 +119,26 @@ class TestPlaytomicClient:
         assert isinstance(slots, list)
         assert len(slots) > 0
         assert all(isinstance(slot, Slot) for slot in slots)
+
+    @patch("playtomic_agent.client.api.requests.Session")
+    def test_get_available_slots_populates_court_type(
+        self, mock_session_class, sample_club, mock_api_response_slots
+    ):
+        """Slots returned by get_available_slots carry the court_type from their court."""
+        mock_session = Mock()
+        mock_session_class.return_value = mock_session
+        mock_response = Mock()
+        mock_response.json.return_value = mock_api_response_slots
+        mock_response.raise_for_status = Mock()
+        mock_session.get.return_value = mock_response
+
+        client = PlaytomicClient()
+        slots = client.get_available_slots(sample_club, "2026-02-15")
+
+        court1_slots = [s for s in slots if s.court_id == "court-1"]
+        court2_slots = [s for s in slots if s.court_id == "court-2"]
+        assert all(s.court_type == "DOUBLE" for s in court1_slots), "court-1 is double"
+        assert all(s.court_type == "SINGLE" for s in court2_slots), "court-2 is single"
 
     def test_filter_slots_by_court_type(self, sample_club, sample_slots):
         """Test filtering slots by court type."""

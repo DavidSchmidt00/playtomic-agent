@@ -76,6 +76,7 @@ class Slot(BaseModel):
     club_id: str = Field(description="ID of the club")
     court_id: str = Field(description="ID of the court")
     court_name: str = Field(description="Name of the court")
+    court_type: str | None = Field(default=None, description="Court type: SINGLE or DOUBLE")
     time: datetime = Field(description="Start time of the slot (UTC)")
     duration: int = Field(description="Duration in minutes")
     price: str = Field(description="Price of the slot")

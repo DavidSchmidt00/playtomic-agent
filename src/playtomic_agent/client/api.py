@@ -319,6 +319,7 @@ class PlaytomicClient:
                         club_id=club.club_id,
                         court_id=resource_id,
                         court_name=court_name,
+                        court_type=court.type.upper() if court else None,
                         time=slot_time,
                         duration=slot_data["duration"],
                         price=slot_data["price"],
