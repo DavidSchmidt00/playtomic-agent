@@ -28,7 +28,13 @@ from neonize.utils.message import extract_text, get_poll_update_message
 
 from playtomic_agent.config import get_settings
 from playtomic_agent.log_config import setup_logging
-from playtomic_agent.metrics import WA_CONNECTED, WA_FAILURES, WA_MESSAGES, metrics_app
+from playtomic_agent.metrics import (
+    WA_CONNECTED,
+    WA_FAILURES,
+    WA_MESSAGES,
+    UsageCallbackHandler,
+    metrics_app,
+)
 from playtomic_agent.whatsapp.agent import (
     WAResponse,
     create_whatsapp_agent,
@@ -788,13 +794,10 @@ def main() -> None:
             wa_response: WAResponse | None = None
             final_text = ""
             try:
+                _usage = UsageCallbackHandler(channel="whatsapp")
+                _invoke_cfg: Any = {"recursion_limit": 30, "callbacks": [_usage]}
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        lambda: agent.invoke(
-                            {"messages": messages},
-                            {"recursion_limit": 30},
-                        )
-                    ),
+                    asyncio.to_thread(lambda: agent.invoke({"messages": messages}, _invoke_cfg)),
                     timeout=settings.agent_timeout_seconds,
                 )
                 wa_response = extract_response(result) if result is not None else None

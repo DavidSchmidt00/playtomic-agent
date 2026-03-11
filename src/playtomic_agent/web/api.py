@@ -22,7 +22,7 @@ from playtomic_agent.client.api import PlaytomicClient
 from playtomic_agent.client.exceptions import APIError, ClubNotFoundError
 from playtomic_agent.config import get_settings
 from playtomic_agent.context import get_timezone, set_request_region
-from playtomic_agent.metrics import metrics_app
+from playtomic_agent.metrics import UsageCallbackHandler, metrics_app
 from playtomic_agent.web.agent import create_playtomic_agent
 from playtomic_agent.web.vote_store import InvalidSlotError as _InvalidSlotError
 from playtomic_agent.web.vote_store import SessionNotFoundError as _SessionNotFoundError
@@ -268,8 +268,11 @@ async def chat(req: ChatRequest, request: Request):  # Added request param for l
             logging.debug(f"Starting agent stream with profile: {req.user_profile}")
 
             # Use "updates" mode to get each step of the graph
+            _usage = UsageCallbackHandler(channel="web")
             async for chunk in agent.astream(
-                {"messages": messages}, stream_mode="updates", config={"recursion_limit": 30}
+                {"messages": messages},
+                stream_mode="updates",
+                config={"recursion_limit": 30, "callbacks": [_usage]},  # type: ignore[arg-type]
             ):
                 for step, data in chunk.items():
                     logging.debug(f"Agent Step: {step}")
